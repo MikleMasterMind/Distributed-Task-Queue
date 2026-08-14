@@ -1,0 +1,17 @@
+[project]
+name = "distributed-task-queue"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "mihail", email = "mihuil_00@mail.ru" }
+]
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+distributed-task-queue = "distributed_task_queue:main"
+
+[build-system]
+requires = ["uv_build>=0.12.4,<0.13.0"]
+build-backend = "uv_build"
