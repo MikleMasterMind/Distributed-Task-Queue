@@ -33,6 +33,24 @@ curl -X POST localhost:8000/tasks \
 curl localhost:8000/tasks/<task_id>
 ```
 
+Список задач с пагинацией и фильтрами:
+
+```bash
+curl 'localhost:8000/tasks?limit=20&status=PENDING&type=echo'
+```
+
+Ответ:
+
+```json
+{
+  "items": [ ... ],
+  "next-token": "...",
+  "limit": 20
+}
+```
+
+Параметры: `limit` (1–100, по умолчанию 20), `next-token` (пагинация), `status`, `type`, `created_after`/`created_before`, `min_executions`/`max_executions`, `started_after`/`started_before` (по датам запуска, совпадение по хотя бы одному запуску), `finished_after`/`finished_before` (по датам завершения, совпадение по хотя бы одному запуску). Задачи отсортированы по дате создания (старые сверху).
+
 Поддерживаемые типы задач: `echo` (`message`), `sleep` (`seconds`), `fibonacci` (`n`).
 
 ## Тесты

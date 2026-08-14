@@ -1,9 +1,17 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
-from api.schemas.tasks import TaskCreate, TaskCreated, TaskOut, TaskStatus
+from api.schemas.tasks import (
+    TaskCreate,
+    TaskCreated,
+    TaskFilter,
+    TaskOut,
+    TaskPage,
+    TaskStatus,
+    TaskType,
+)
 from repository import TaskRepository, get_task_repository
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -32,6 +40,42 @@ def create_task(
     )
     repo.create(task)
     return TaskCreated(id=task.id, status=task.status)
+
+
+@router.get(
+    "",
+    response_model=TaskPage,
+    summary="List tasks",
+    description="Return tasks with pagination and filters.",
+)
+def list_tasks(
+    status: TaskStatus | None = Query(default=None),
+    type: TaskType | None = Query(default=None),
+    created_after: datetime | None = Query(default=None),
+    created_before: datetime | None = Query(default=None),
+    min_executions: int | None = Query(default=None, ge=0),
+    max_executions: int | None = Query(default=None, ge=0),
+    started_after: datetime | None = Query(default=None),
+    started_before: datetime | None = Query(default=None),
+    finished_after: datetime | None = Query(default=None),
+    finished_before: datetime | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    next_token: str | None = Query(default=None, alias="next-token"),
+    repo: TaskRepository = Depends(get_task_repository),
+) -> TaskPage:
+    filter = TaskFilter(
+        status=status,
+        type=type,
+        created_after=created_after,
+        created_before=created_before,
+        min_executions=min_executions,
+        max_executions=max_executions,
+        started_after=started_after,
+        started_before=started_before,
+        finished_after=finished_after,
+        finished_before=finished_before,
+    )
+    return repo.list_tasks(filter=filter, limit=limit, cursor=next_token)
 
 
 @router.get(

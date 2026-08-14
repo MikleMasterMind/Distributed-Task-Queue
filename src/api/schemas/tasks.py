@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 TaskType = Literal["echo", "sleep", "fibonacci"]
 
@@ -67,3 +67,28 @@ class TaskOut(BaseModel):
 class TaskCreated(BaseModel):
     id: str
     status: TaskStatus
+
+
+class TaskFilter(BaseModel):
+    status: TaskStatus | None = None
+    type: TaskType | None = None
+    created_after: datetime | None = None
+    created_before: datetime | None = None
+    min_executions: int | None = Field(default=None, ge=0)
+    max_executions: int | None = Field(default=None, ge=0)
+    started_after: datetime | None = None
+    started_before: datetime | None = None
+    finished_after: datetime | None = None
+    finished_before: datetime | None = None
+
+
+class TaskPage(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    items: list[TaskOut]
+    next_token: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("next-token"),
+        serialization_alias="next-token",
+    )
+    limit: int
