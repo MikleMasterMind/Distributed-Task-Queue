@@ -3,8 +3,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.schemas.task_create import TaskCreate
-from api.schemas.task_out import TaskCreated, TaskOut, TaskStatus
+from api.schemas.tasks import TaskCreate, TaskCreated, TaskOut, TaskStatus
 from repository import TaskRepository, get_task_repository
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])

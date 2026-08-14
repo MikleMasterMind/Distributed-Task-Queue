@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from api.schemas.task_out import TaskOut
+from api.schemas.tasks import TaskOut
 
 
 class TaskRepository(ABC):

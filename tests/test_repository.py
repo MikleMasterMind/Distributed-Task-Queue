@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from api.schemas.task_out import TaskOut
+from api.schemas.tasks import TaskOut
 from repository import FileTaskRepository
 
 
