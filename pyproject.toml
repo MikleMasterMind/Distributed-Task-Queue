@@ -6,12 +6,30 @@ readme = "README.md"
 authors = [
     { name = "mihail", email = "mihuil_00@mail.ru" }
 ]
-requires-python = ">=3.9"
-dependencies = []
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "pydantic",
+    "uvicorn",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx2",
+    "pytest",
+]
 
 [project.scripts]
-distributed-task-queue = "distributed_task_queue:main"
+distributed-task-queue = "main:main"
 
 [build-system]
-requires = ["uv_build>=0.12.4,<0.13.0"]
-build-backend = "uv_build"
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+py-modules = ["app", "config", "main"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["api*", "repository*"]
