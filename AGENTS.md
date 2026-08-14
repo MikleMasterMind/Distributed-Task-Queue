@@ -25,6 +25,10 @@ FastAPI (Python) → Redis Queue → Go Workers → PostgreSQL
 
 `MVP.md` §14 explicitly defers: retries, priority/multiple queues, scheduled/cron tasks, heartbeat, worker discovery, visibility timeout, DLQ, distributed locks, auth, dashboard, metrics/tracing, custom broker, Kubernetes. Do not introduce these in V1 even if they seem easy.
 
+## Git restrictions
+
+- **Never** run `git add`, `git commit`, `git push`, `git rebase`, `git merge`, or any other git-mutating commands. Commit only when the user explicitly asks. (For the expected format, see COMMIT-RULES.MD below.)
+
 ## Commit rules (from COMMIT-RULES.MD)
 
 - Conventional Commits: `<type>(<scope>): <description>`.
@@ -37,4 +41,6 @@ FastAPI (Python) → Redis Queue → Go Workers → PostgreSQL
 ## Conventions
 
 - Project docs are written in **Russian**; commit subjects/bodies are in **English**.
+- No comments in code — anywhere.
+- Python tooling: use **uv** for dependency management, virtualenvs, and running scripts (no pip/venv directly).
 - No build/test/lint tooling exists yet. Before adding code, establish test commands (unit + the integration scenario in MVP.md §13/§15) and record them here.
