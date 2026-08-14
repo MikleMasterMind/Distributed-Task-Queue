@@ -1,0 +1,68 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from app import app
+from repository import FileTaskRepository, get_task_repository
+
+
+@pytest.fixture()
+def client(tmp_path):
+    repo = FileTaskRepository(tmp_path)
+    app.dependency_overrides[get_task_repository] = lambda: repo
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+def test_create_task(client):
+    resp = client.post("/tasks", json={"type": "echo", "payload": {"message": "hello"}})
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["id"]
+    assert body["status"] == "PENDING"
+
+
+def test_get_task(client):
+    created = client.post(
+        "/tasks", json={"type": "echo", "payload": {"message": "hello"}}
+    ).json()
+    resp = client.get(f"/tasks/{created['id']}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["id"] == created["id"]
+    assert body["type"] == "echo"
+    assert body["payload"] == {"message": "hello"}
+    assert body["status"] == "PENDING"
+    assert body["result"] is None
+    assert body["error"] is None
+    assert body["created_at"]
+    assert body["executions"] == []
+
+
+def test_get_missing_task(client):
+    resp = client.get("/tasks/missing")
+    assert resp.status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("task_type", "payload"),
+    [
+        ("echo", {}),
+        ("echo", {"seconds": 1}),
+        ("sleep", {"message": "x"}),
+        ("sleep", {"seconds": -1}),
+        ("sleep", {"seconds": "5"}),
+        ("sleep", {}),
+        ("fibonacci", {}),
+        ("fibonacci", {"n": -1}),
+        ("fibonacci", {"n": "10"}),
+    ],
+)
+def test_invalid_payload(client, task_type, payload):
+    resp = client.post("/tasks", json={"type": task_type, "payload": payload})
+    assert resp.status_code == 422
+
+
+def test_unknown_task_type(client):
+    resp = client.post("/tasks", json={"type": "unknown", "payload": {}})
+    assert resp.status_code == 422
