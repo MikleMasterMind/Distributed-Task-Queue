@@ -43,4 +43,9 @@ FastAPI (Python) → Redis Queue → Go Workers → PostgreSQL
 - Project docs are written in **Russian**; commit subjects/bodies are in **English**.
 - No comments in code — anywhere.
 - Python tooling: use **uv** for dependency management, virtualenvs, and running scripts (no pip/venv directly).
-- No build/test/lint tooling exists yet. Before adding code, establish test commands (unit + the integration scenario in MVP.md §13/§15) and record them here.
+
+## Commands
+
+- Install deps: `uv sync --extra dev`
+- Run API: `uv run distributed-task-queue` (uvicorn on `0.0.0.0:8000`)
+- Run tests: `uv run pytest`
