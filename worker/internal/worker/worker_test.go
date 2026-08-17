@@ -1,10 +1,14 @@
 package worker
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +16,8 @@ import (
 	"distributed-task-queue/worker/internal/store"
 	"distributed-task-queue/worker/internal/task"
 )
+
+var testLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 func writeTask(t *testing.T, dir, id, typ string, payload map[string]any) {
 	t.Helper()
@@ -45,9 +51,9 @@ func readTask(t *testing.T, dir, id string) task.Task {
 
 func startWorker(t *testing.T, dir string, concurrency int) (*Worker, context.CancelFunc) {
 	t.Helper()
-	s := store.NewFileStore(dir)
-	e := executor.NewDispatcher()
-	w := New(s, e, concurrency, 5*time.Millisecond)
+	s := store.NewFileStore(dir, testLogger)
+	e := executor.NewDispatcher(testLogger)
+	w := New(s, e, concurrency, 5*time.Millisecond, testLogger)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() {
@@ -150,9 +156,9 @@ func TestGracefulShutdown(t *testing.T) {
 	dir := t.TempDir()
 	writeTask(t, dir, "slow", "sleep", map[string]any{"seconds": 2})
 
-	s := store.NewFileStore(dir)
-	e := executor.NewDispatcher()
-	w := New(s, e, 1, 5*time.Millisecond)
+	s := store.NewFileStore(dir, testLogger)
+	e := executor.NewDispatcher(testLogger)
+	w := New(s, e, 1, 5*time.Millisecond, testLogger)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() {
@@ -194,5 +200,34 @@ func TestGracefulShutdown(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	if got := readTask(t, dir, "after").Status; got != task.StatusPending {
 		t.Errorf("worker accepted a new task after shutdown, got %s", got)
+	}
+}
+
+func TestWorkerLogsTaskResult(t *testing.T) {
+	dir := t.TempDir()
+	writeTask(t, dir, "t1", "echo", map[string]any{"message": "hello"})
+
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, nil))
+	s := store.NewFileStore(dir, logger)
+	e := executor.NewDispatcher(logger)
+	w := New(s, e, 1, 5*time.Millisecond, logger)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		w.Run(ctx)
+		close(done)
+	}()
+	waitFinal(t, dir, []string{"t1"})
+	cancel()
+	<-done
+
+	logs := buf.String()
+	if !strings.Contains(logs, "task succeeded") {
+		t.Errorf("expected log 'task succeeded', got:\n%s", logs)
+	}
+	if !strings.Contains(logs, "task_id=t1") {
+		t.Errorf("expected log with task_id=t1, got:\n%s", logs)
 	}
 }

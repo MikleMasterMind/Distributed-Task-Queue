@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"errors"
+	"io"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -10,9 +12,11 @@ import (
 	"distributed-task-queue/worker/internal/task"
 )
 
+var testLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
+
 func writeTask(t *testing.T, dir string, tk *task.Task) {
 	t.Helper()
-	if err := (&FileStore{dir: dir}).writeLocked(tk.ID, tk); err != nil {
+	if err := NewFileStore(dir, testLogger).writeLocked(tk.ID, tk); err != nil {
 		t.Fatalf("write task %s: %v", tk.ID, err)
 	}
 }
@@ -29,7 +33,7 @@ func makeTask(id string, status task.Status) *task.Task {
 
 func TestListPending(t *testing.T) {
 	dir := t.TempDir()
-	s := NewFileStore(dir)
+	s := NewFileStore(dir, testLogger)
 	writeTask(t, dir, makeTask("pending", task.StatusPending))
 	writeTask(t, dir, makeTask("running", task.StatusRunning))
 	writeTask(t, dir, makeTask("success", task.StatusSuccess))
@@ -45,7 +49,7 @@ func TestListPending(t *testing.T) {
 }
 
 func TestListPendingMissingDir(t *testing.T) {
-	s := NewFileStore(t.TempDir() + "/nope")
+	s := NewFileStore(t.TempDir() + "/nope", testLogger)
 	ids, err := s.ListPending(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -57,7 +61,7 @@ func TestListPendingMissingDir(t *testing.T) {
 
 func TestClaim(t *testing.T) {
 	dir := t.TempDir()
-	s := NewFileStore(dir)
+	s := NewFileStore(dir, testLogger)
 	writeTask(t, dir, makeTask("t1", task.StatusPending))
 
 	started := time.Now().UTC()
@@ -72,7 +76,7 @@ func TestClaim(t *testing.T) {
 		t.Errorf("started_at not set correctly: %v", claimed.StartedAt)
 	}
 
-	onDisk, err := (&FileStore{dir: dir}).readLocked("t1")
+	onDisk, err := (NewFileStore(dir, testLogger)).readLocked("t1")
 	if err != nil {
 		t.Fatalf("read task: %v", err)
 	}
@@ -83,7 +87,7 @@ func TestClaim(t *testing.T) {
 
 func TestClaimNotPending(t *testing.T) {
 	dir := t.TempDir()
-	s := NewFileStore(dir)
+	s := NewFileStore(dir, testLogger)
 	writeTask(t, dir, makeTask("t1", task.StatusSuccess))
 	_, err := s.Claim(context.Background(), "t1", time.Now().UTC())
 	if !errors.Is(err, ErrNotPending) {
@@ -92,7 +96,7 @@ func TestClaimNotPending(t *testing.T) {
 }
 
 func TestClaimMissing(t *testing.T) {
-	s := NewFileStore(t.TempDir())
+	s := NewFileStore(t.TempDir(), testLogger)
 	_, err := s.Claim(context.Background(), "missing", time.Now().UTC())
 	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got %v", err)
@@ -101,7 +105,7 @@ func TestClaimMissing(t *testing.T) {
 
 func TestComplete(t *testing.T) {
 	dir := t.TempDir()
-	s := NewFileStore(dir)
+	s := NewFileStore(dir, testLogger)
 	writeTask(t, dir, makeTask("t1", task.StatusPending))
 	if _, err := s.Claim(context.Background(), "t1", time.Now().UTC()); err != nil {
 		t.Fatalf("claim: %v", err)
@@ -113,7 +117,7 @@ func TestComplete(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	onDisk, err := (&FileStore{dir: dir}).readLocked("t1")
+	onDisk, err := (NewFileStore(dir, testLogger)).readLocked("t1")
 	if err != nil {
 		t.Fatalf("read task: %v", err)
 	}
@@ -133,7 +137,7 @@ func TestComplete(t *testing.T) {
 
 func TestFail(t *testing.T) {
 	dir := t.TempDir()
-	s := NewFileStore(dir)
+	s := NewFileStore(dir, testLogger)
 	writeTask(t, dir, makeTask("t1", task.StatusPending))
 	if _, err := s.Claim(context.Background(), "t1", time.Now().UTC()); err != nil {
 		t.Fatalf("claim: %v", err)
@@ -144,7 +148,7 @@ func TestFail(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	onDisk, err := (&FileStore{dir: dir}).readLocked("t1")
+	onDisk, err := (NewFileStore(dir, testLogger)).readLocked("t1")
 	if err != nil {
 		t.Fatalf("read task: %v", err)
 	}
@@ -161,7 +165,7 @@ func TestFail(t *testing.T) {
 
 func TestConcurrentClaimSingleWinner(t *testing.T) {
 	dir := t.TempDir()
-	s := NewFileStore(dir)
+	s := NewFileStore(dir, testLogger)
 	writeTask(t, dir, makeTask("t1", task.StatusPending))
 
 	const workers = 8

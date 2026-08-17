@@ -2,14 +2,18 @@ package executor
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"testing"
 	"time"
 
 	"distributed-task-queue/worker/internal/task"
 )
 
+var testLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
+
 func TestEcho(t *testing.T) {
-	d := NewDispatcher()
+	d := NewDispatcher(testLogger)
 	res, err := d.Execute(context.Background(), task.Task{
 		Type:    "echo",
 		Payload: map[string]any{"message": "hello"},
@@ -23,7 +27,7 @@ func TestEcho(t *testing.T) {
 }
 
 func TestEchoInvalidPayload(t *testing.T) {
-	d := NewDispatcher()
+	d := NewDispatcher(testLogger)
 	_, err := d.Execute(context.Background(), task.Task{
 		Type:    "echo",
 		Payload: map[string]any{},
@@ -34,7 +38,7 @@ func TestEchoInvalidPayload(t *testing.T) {
 }
 
 func TestSleep(t *testing.T) {
-	d := NewDispatcher()
+	d := NewDispatcher(testLogger)
 	start := time.Now()
 	res, err := d.Execute(context.Background(), task.Task{
 		Type:    "sleep",
@@ -54,7 +58,7 @@ func TestSleep(t *testing.T) {
 func TestSleepCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	d := NewDispatcher()
+	d := NewDispatcher(testLogger)
 	_, err := d.Execute(ctx, task.Task{
 		Type:    "sleep",
 		Payload: map[string]any{"seconds": 5.0},
@@ -65,7 +69,7 @@ func TestSleepCancelled(t *testing.T) {
 }
 
 func TestSleepInvalidPayload(t *testing.T) {
-	d := NewDispatcher()
+	d := NewDispatcher(testLogger)
 	for _, payload := range []map[string]any{
 		{},
 		{"seconds": -1.0},
@@ -82,7 +86,7 @@ func TestSleepInvalidPayload(t *testing.T) {
 }
 
 func TestFibonacci(t *testing.T) {
-	d := NewDispatcher()
+	d := NewDispatcher(testLogger)
 	res, err := d.Execute(context.Background(), task.Task{
 		Type:    "fibonacci",
 		Payload: map[string]any{"n": 10.0},
@@ -96,7 +100,7 @@ func TestFibonacci(t *testing.T) {
 }
 
 func TestFibonacciEdgeCases(t *testing.T) {
-	d := NewDispatcher()
+	d := NewDispatcher(testLogger)
 	for n, want := range map[int]int{0: 0, 1: 1, 2: 1, 20: 6765} {
 		res, err := d.Execute(context.Background(), task.Task{
 			Type:    "fibonacci",
@@ -112,7 +116,7 @@ func TestFibonacciEdgeCases(t *testing.T) {
 }
 
 func TestFibonacciInvalidPayload(t *testing.T) {
-	d := NewDispatcher()
+	d := NewDispatcher(testLogger)
 	for _, payload := range []map[string]any{
 		{},
 		{"n": -1.0},
@@ -129,7 +133,7 @@ func TestFibonacciInvalidPayload(t *testing.T) {
 }
 
 func TestUnknownType(t *testing.T) {
-	d := NewDispatcher()
+	d := NewDispatcher(testLogger)
 	_, err := d.Execute(context.Background(), task.Task{
 		Type:    "unknown",
 		Payload: map[string]any{},

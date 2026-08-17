@@ -81,9 +81,10 @@ go build -o worker ./cmd/worker
 
 Параметры:
 
-- `--tasks-dir` (env `TASKS_DIR`) — каталог с JSON-файлами задач, по умолчанию `data/tasks`;
+- `--tasks-dir` (env `TASKS_DIR`) — каталог с JSON-файлами задач, по умолчанию `data/tasks` в корне репозитория;
 - `--concurrency` (env `CONCURRENCY`) — число одновременно выполняемых задач, по умолчанию `4`;
-- `--poll-interval` (env `POLL_INTERVAL_MS`) — интервал сканирования каталога, по умолчанию `1s`.
+- `--poll-interval` (env `POLL_INTERVAL_MS`) — интервал сканирования каталога, по умолчанию `1s`;
+- `--log-level` (env `LOG_LEVEL`) — уровень логирования (`debug`, `info`, `warn`, `error`), по умолчанию `info`.
 
 Worker останавливается по `SIGINT`/`SIGTERM`: перестаёт брать новые задачи, дожидается завершения текущих и выходит.
 

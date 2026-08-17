@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,12 +15,16 @@ import (
 )
 
 type FileStore struct {
-	dir string
-	mu  sync.Mutex
+	dir    string
+	logger *slog.Logger
+	mu     sync.Mutex
 }
 
-func NewFileStore(dir string) *FileStore {
-	return &FileStore{dir: dir}
+func NewFileStore(dir string, logger *slog.Logger) *FileStore {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return &FileStore{dir: dir, logger: logger}
 }
 
 func (s *FileStore) ListPending(ctx context.Context) ([]string, error) {
@@ -40,6 +45,7 @@ func (s *FileStore) ListPending(ctx context.Context) ([]string, error) {
 		id := strings.TrimSuffix(entry.Name(), ".json")
 		t, err := s.readLocked(id)
 		if err != nil {
+			s.logger.Warn("skipping unreadable task file", "file", entry.Name(), "error", err)
 			continue
 		}
 		if t.Status == task.StatusPending {
@@ -107,6 +113,7 @@ func (s *FileStore) readLocked(id string) (task.Task, error) {
 	if err := json.Unmarshal(data, &t); err != nil {
 		return task.Task{}, err
 	}
+	s.logger.Debug("read task file", "file", s.path(id), "task_id", id, "status", t.Status)
 	return t, nil
 }
 
