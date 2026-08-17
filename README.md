@@ -1,8 +1,8 @@
 # Distributed-Task-Queue
 
-Распределённая очередь задач. На текущем этапе реализован минимальный HTTP API на Python (FastAPI).
+Распределённая очередь задач. Реализован HTTP API на Python (FastAPI) и Go-worker для выполнения задач.
 
-Архитектура (план): `FastAPI → Redis Queue → Go Workers → PostgreSQL`. Сейчас хранение — JSON-файлы в папке `data/`.
+Архитектура (план): `FastAPI → Redis Queue → Go Workers → PostgreSQL`. Сейчас хранение — JSON-файлы в папке `data/`, API и worker работают с одним и тем же каталогом задач: один файл `{task_id}.json` на задачу.
 
 ## Запуск
 
@@ -60,6 +60,39 @@ curl 'localhost:8000/tasks?limit=20&status=PENDING&type=echo'
 Параметры: `limit` (1–100, по умолчанию 20), `next-token` (пагинация), `status`, `type`, `created_after`/`created_before`, `started_after`/`started_before` (по дате запуска), `finished_after`/`finished_before` (по дате завершения). Задачи отсортированы по дате создания (старые сверху).
 
 Поддерживаемые типы задач: `echo` (`message`), `sleep` (`seconds`), `fibonacci` (`n`).
+
+## Go Worker
+
+Worker периодически сканирует каталог задач, берёт задачи со статусом `PENDING`, выполняет их и записывает результат обратно в файлы. Выполнение идёт параллельно (количество горутин задаётся конфигурацией). Ошибка одной задачи не влияет на остальные.
+
+Требуется Go 1.26+.
+
+```bash
+cd worker
+go build -o worker ./cmd/worker
+./worker
+```
+
+Запуск worker'а поверх данных API:
+
+```bash
+./worker --tasks-dir=data/tasks
+```
+
+Параметры:
+
+- `--tasks-dir` (env `TASKS_DIR`) — каталог с JSON-файлами задач, по умолчанию `data/tasks`;
+- `--concurrency` (env `CONCURRENCY`) — число одновременно выполняемых задач, по умолчанию `4`;
+- `--poll-interval` (env `POLL_INTERVAL_MS`) — интервал сканирования каталога, по умолчанию `1s`.
+
+Worker останавливается по `SIGINT`/`SIGTERM`: перестаёт брать новые задачи, дожидается завершения текущих и выходит.
+
+Тесты:
+
+```bash
+cd worker
+go test ./...
+```
 
 ## Тесты
 
