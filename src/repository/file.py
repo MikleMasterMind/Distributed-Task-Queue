@@ -3,8 +3,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from api.schemas.tasks import TaskFilter, TaskOut, TaskPage
-from repository.base import TaskRepository
+from api.schemas.tasks import TaskFilter, TaskOut, TaskPage, TaskStatus
+from repository.base import TaskNotFoundError, TaskNotPendingError, TaskRepository
 
 
 class FileTaskRepository(TaskRepository):
@@ -23,6 +23,15 @@ class FileTaskRepository(TaskRepository):
             return None
         with path.open(encoding="utf-8") as f:
             return TaskOut.model_validate(json.load(f))
+
+    def delete(self, task_id: str) -> TaskOut:
+        task = self.get(task_id)
+        if task is None:
+            raise TaskNotFoundError(task_id)
+        if task.status != TaskStatus.PENDING:
+            raise TaskNotPendingError(task_id)
+        (self.tasks_dir / f"{task_id}.json").unlink()
+        return task
 
     def list_tasks(
         self, filter: TaskFilter, limit: int, cursor: str | None

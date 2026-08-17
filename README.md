@@ -33,6 +33,14 @@ curl -X POST localhost:8000/tasks \
 curl localhost:8000/tasks/<task_id>
 ```
 
+Удаление задачи (только если она ещё не начала выполняться, `PENDING`):
+
+```bash
+curl -X DELETE localhost:8000/tasks/<task_id>
+```
+
+Успех — `204 No Content`. Ошибки: `404` (задача не найдена), `409` (задача уже начала выполняться).
+
 Список задач с пагинацией и фильтрами:
 
 ```bash

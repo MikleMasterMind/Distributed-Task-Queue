@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from api.schemas.tasks import (
     TaskCreate,
@@ -13,6 +13,7 @@ from api.schemas.tasks import (
     TaskType,
 )
 from repository import TaskRepository, get_task_repository
+from repository.base import TaskNotFoundError, TaskNotPendingError
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -87,3 +88,22 @@ def get_task(
     if task is None:
         raise HTTPException(status_code=404, detail="task not found")
     return task
+
+
+@router.delete(
+    "/{task_id}",
+    status_code=204,
+    summary="Delete a task",
+    description="Delete a pending task. Tasks that have already started cannot be deleted.",
+)
+def delete_task(
+    task_id: str,
+    repo: TaskRepository = Depends(get_task_repository),
+) -> Response:
+    try:
+        repo.delete(task_id)
+    except TaskNotFoundError:
+        raise HTTPException(status_code=404, detail="task not found")
+    except TaskNotPendingError:
+        raise HTTPException(status_code=409, detail="task already started")
+    return Response(status_code=204)

@@ -2,8 +2,11 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 from api.schemas.tasks import TaskFilter, TaskOut, TaskStatus
 from repository import FileTaskRepository
+from repository.base import TaskNotFoundError, TaskNotPendingError
 
 
 def make_task(
@@ -37,6 +40,32 @@ def test_create_and_get(tmp_path: Path):
 def test_get_missing(tmp_path: Path):
     repo = FileTaskRepository(tmp_path)
     assert repo.get("missing") is None
+
+
+def test_delete_pending(tmp_path: Path):
+    repo = FileTaskRepository(tmp_path)
+    task = make_task()
+    repo.create(task)
+    assert repo.delete(task.id) == task
+    assert repo.get(task.id) is None
+    assert not (tmp_path / f"{task.id}.json").exists()
+
+
+def test_delete_missing(tmp_path: Path):
+    repo = FileTaskRepository(tmp_path)
+    with pytest.raises(TaskNotFoundError):
+        repo.delete("missing")
+
+
+@pytest.mark.parametrize("status", [TaskStatus.RUNNING, TaskStatus.SUCCESS, TaskStatus.FAILED])
+def test_delete_not_pending(tmp_path: Path, status: TaskStatus):
+    repo = FileTaskRepository(tmp_path)
+    task = make_task(status=status)
+    repo.create(task)
+    with pytest.raises(TaskNotPendingError):
+        repo.delete(task.id)
+    assert repo.get(task.id) is not None
+    assert (tmp_path / f"{task.id}.json").exists()
 
 
 def test_list_empty(tmp_path: Path):
