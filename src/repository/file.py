@@ -44,37 +44,39 @@ class FileTaskRepository(TaskRepository):
         )
         return TaskPage(items=page[:limit], next_token=next_token, limit=limit)
 
+    def _matches(self, task: TaskOut, filter: TaskFilter) -> bool:
+        checks = [
+            self._matches_status,
+            self._matches_type,
+            self._matches_created_range,
+            self._matches_started_range,
+            self._matches_finished_range,
+        ]
+        return all(check(task, filter) for check in checks)
+
     @staticmethod
-    def _matches(task: TaskOut, filter: TaskFilter) -> bool:
-        if filter.status is not None and task.status != filter.status:
-            return False
-        if filter.type is not None and task.type != filter.type:
-            return False
-        if filter.created_after is not None and task.created_at < filter.created_after:
-            return False
-        if filter.created_before is not None and task.created_at > filter.created_before:
-            return False
-        executions = len(task.executions)
-        if filter.min_executions is not None and executions < filter.min_executions:
-            return False
-        if filter.max_executions is not None and executions > filter.max_executions:
-            return False
-        if filter.started_after is not None or filter.started_before is not None:
-            if not any(
-                _in_range(e.started_at, filter.started_after, filter.started_before)
-                for e in task.executions
-            ):
-                return False
-        if filter.finished_after is not None or filter.finished_before is not None:
-            if not any(
-                e.finished_at is not None
-                and _in_range(
-                    e.finished_at, filter.finished_after, filter.finished_before
-                )
-                for e in task.executions
-            ):
-                return False
-        return True
+    def _matches_status(task: TaskOut, filter: TaskFilter) -> bool:
+        return filter.status is None or task.status == filter.status
+
+    @staticmethod
+    def _matches_type(task: TaskOut, filter: TaskFilter) -> bool:
+        return filter.type is None or task.type == filter.type
+
+    @staticmethod
+    def _matches_created_range(task: TaskOut, filter: TaskFilter) -> bool:
+        return _in_range(task.created_at, filter.created_after, filter.created_before)
+
+    @staticmethod
+    def _matches_started_range(task: TaskOut, filter: TaskFilter) -> bool:
+        if task.started_at is None:
+            return filter.started_after is None and filter.started_before is None
+        return _in_range(task.started_at, filter.started_after, filter.started_before)
+
+    @staticmethod
+    def _matches_finished_range(task: TaskOut, filter: TaskFilter) -> bool:
+        if task.finished_at is None:
+            return filter.finished_after is None and filter.finished_before is None
+        return _in_range(task.finished_at, filter.finished_after, filter.finished_before)
 
     @staticmethod
     def _encode_cursor(task: TaskOut) -> str:

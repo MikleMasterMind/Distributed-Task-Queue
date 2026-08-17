@@ -104,12 +104,11 @@ Task
 ├── result
 ├── error
 ├── created_at
-└── executions
-    ├── started_at
-    └── finished_at
+├── started_at
+└── finished_at
 ```
 
-`executions` — массив пар `started_at`/`finished_at`: задача может выполняться несколько раз, и каждая попытка запуска фиксируется отдельной парой.
+Каждая задача выполняется **только один раз**: `started_at`/`finished_at` — единственная пара отметок запуска и завершения.
 
 ### Status
 
@@ -185,12 +184,8 @@ Response:
   },
   "error": null,
   "created_at": "...",
-  "executions": [
-    {
-      "started_at": "...",
-      "finished_at": "..."
-    }
-  ]
+  "started_at": "...",
+  "finished_at": "..."
 }
 ```
 

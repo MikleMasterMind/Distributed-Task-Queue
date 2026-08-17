@@ -36,7 +36,8 @@ def test_get_task(client):
     assert body["result"] is None
     assert body["error"] is None
     assert body["created_at"]
-    assert body["executions"] == []
+    assert body["started_at"] is None
+    assert body["finished_at"] is None
 
 
 def test_get_missing_task(client):

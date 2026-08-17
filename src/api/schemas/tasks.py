@@ -48,11 +48,6 @@ class TaskCreate(BaseModel):
             raise ValueError(f"payload.{field} must be a non-negative integer")
 
 
-class TaskExecution(BaseModel):
-    started_at: datetime
-    finished_at: datetime | None = None
-
-
 class TaskOut(BaseModel):
     id: str
     type: TaskType
@@ -61,7 +56,8 @@ class TaskOut(BaseModel):
     result: dict[str, Any] | None = None
     error: str | None = None
     created_at: datetime
-    executions: list[TaskExecution] = []
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
 
 
 class TaskCreated(BaseModel):
@@ -74,8 +70,6 @@ class TaskFilter(BaseModel):
     type: TaskType | None = None
     created_after: datetime | None = None
     created_before: datetime | None = None
-    min_executions: int | None = Field(default=None, ge=0)
-    max_executions: int | None = Field(default=None, ge=0)
     started_after: datetime | None = None
     started_before: datetime | None = None
     finished_after: datetime | None = None

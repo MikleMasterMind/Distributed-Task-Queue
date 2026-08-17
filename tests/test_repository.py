@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from api.schemas.tasks import TaskExecution, TaskFilter, TaskOut, TaskStatus
+from api.schemas.tasks import TaskFilter, TaskOut, TaskStatus
 from repository import FileTaskRepository
 
 
@@ -12,7 +12,8 @@ def make_task(
     payload: dict | None = None,
     status: TaskStatus = TaskStatus.PENDING,
     created_at: datetime | None = None,
-    executions: list[TaskExecution] | None = None,
+    started_at: datetime | None = None,
+    finished_at: datetime | None = None,
 ) -> TaskOut:
     return TaskOut(
         id=str(uuid.uuid4()),
@@ -20,7 +21,8 @@ def make_task(
         payload=payload or {"message": "hello"},
         status=status,
         created_at=created_at or datetime.now(timezone.utc),
-        executions=executions or [],
+        started_at=started_at,
+        finished_at=finished_at,
     )
 
 
@@ -109,46 +111,30 @@ def test_list_filter_by_created_range(tmp_path: Path):
     assert len(page.items) == 2
 
 
-def test_list_filter_by_executions_count(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
-    started = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
-    repo.create(make_task(executions=[]))
-    repo.create(
-        make_task(
-            executions=[TaskExecution(started_at=started, finished_at=started)]
-        )
-    )
-    filter = TaskFilter(min_executions=1, max_executions=1)
-    page = repo.list_tasks(filter, limit=20, cursor=None)
-    assert len(page.items) == 1
-
-
 def test_list_filter_by_started_range(tmp_path: Path):
     repo = FileTaskRepository(tmp_path)
     started = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
-    repo.create(
-        make_task(executions=[TaskExecution(started_at=started, finished_at=started)])
-    )
-    repo.create(make_task(executions=[]))
+    repo.create(make_task(started_at=started, finished_at=started))
+    repo.create(make_task())
     filter = TaskFilter(
         started_after=datetime(2026, 1, 1, 11, 0, tzinfo=timezone.utc),
         started_before=datetime(2026, 1, 1, 13, 0, tzinfo=timezone.utc),
     )
     page = repo.list_tasks(filter, limit=20, cursor=None)
     assert len(page.items) == 1
+    assert page.items[0].started_at == started
 
 
 def test_list_filter_by_finished_range(tmp_path: Path):
     repo = FileTaskRepository(tmp_path)
     started = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
     finished = datetime(2026, 1, 1, 12, 5, tzinfo=timezone.utc)
-    repo.create(
-        make_task(executions=[TaskExecution(started_at=started, finished_at=finished)])
-    )
-    repo.create(make_task(executions=[]))
+    repo.create(make_task(started_at=started, finished_at=finished))
+    repo.create(make_task())
     filter = TaskFilter(
         finished_after=datetime(2026, 1, 1, 12, 4, tzinfo=timezone.utc),
         finished_before=datetime(2026, 1, 1, 12, 6, tzinfo=timezone.utc),
     )
     page = repo.list_tasks(filter, limit=20, cursor=None)
     assert len(page.items) == 1
+    assert page.items[0].finished_at == finished

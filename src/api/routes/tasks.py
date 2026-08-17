@@ -36,7 +36,6 @@ def create_task(
         result=None,
         error=None,
         created_at=datetime.now(timezone.utc),
-        executions=[],
     )
     repo.create(task)
     return TaskCreated(id=task.id, status=task.status)
@@ -53,8 +52,6 @@ def list_tasks(
     type: TaskType | None = Query(default=None),
     created_after: datetime | None = Query(default=None),
     created_before: datetime | None = Query(default=None),
-    min_executions: int | None = Query(default=None, ge=0),
-    max_executions: int | None = Query(default=None, ge=0),
     started_after: datetime | None = Query(default=None),
     started_before: datetime | None = Query(default=None),
     finished_after: datetime | None = Query(default=None),
@@ -68,8 +65,6 @@ def list_tasks(
         type=type,
         created_after=created_after,
         created_before=created_before,
-        min_executions=min_executions,
-        max_executions=max_executions,
         started_after=started_after,
         started_before=started_before,
         finished_after=finished_after,
