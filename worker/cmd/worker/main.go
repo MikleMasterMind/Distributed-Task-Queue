@@ -9,6 +9,7 @@ import (
 
 	"distributed-task-queue/worker/internal/config"
 	"distributed-task-queue/worker/internal/executor"
+	"distributed-task-queue/worker/internal/queue"
 	"distributed-task-queue/worker/internal/store"
 	"distributed-task-queue/worker/internal/worker"
 )
@@ -23,9 +24,16 @@ func main() {
 
 	s := store.NewFileStore(cfg.TasksDir, logger)
 	e := executor.NewDispatcher(logger)
-	w := worker.New(s, e, cfg.Concurrency, cfg.PollInterval, logger)
 
-	logger.Info("worker started", "tasks_dir", cfg.TasksDir, "concurrency", cfg.Concurrency, "poll_interval", cfg.PollInterval.String())
+	q, err := queue.NewQueue(cfg, s, logger)
+	if err != nil {
+		logger.Error("failed to create queue", "error", err)
+		os.Exit(1)
+	}
+
+	w := worker.New(s, e, q, cfg.Concurrency, logger)
+
+	logger.Info("worker started", "queue", cfg.QueueType, "tasks_dir", cfg.TasksDir, "concurrency", cfg.Concurrency, "poll_interval", cfg.PollInterval.String())
 	w.Run(ctx)
 	logger.Info("worker stopped")
 }

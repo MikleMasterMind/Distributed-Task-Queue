@@ -10,6 +10,8 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi",
     "pydantic",
+    "python-dotenv",
+    "redis",
     "uvicorn",
 ]
 
@@ -32,4 +34,4 @@ py-modules = ["app", "config", "main"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["api*", "repository*"]
+include = ["api*", "repository*", "taskqueue*"]

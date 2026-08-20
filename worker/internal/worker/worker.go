@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"distributed-task-queue/worker/internal/executor"
+	"distributed-task-queue/worker/internal/queue"
 	"distributed-task-queue/worker/internal/store"
 )
 
@@ -15,14 +16,13 @@ type Worker struct {
 	store        store.Store
 	exec         executor.Executor
 	logger       *slog.Logger
-	concurrency  int
-	pollInterval time.Duration
-	tasks        chan string
+	workersCount int
+	queue        queue.Queue
 }
 
-func New(s store.Store, e executor.Executor, concurrency int, pollInterval time.Duration, logger *slog.Logger) *Worker {
-	if concurrency < 1 {
-		concurrency = 1
+func New(s store.Store, e executor.Executor, q queue.Queue, workersCount int, logger *slog.Logger) *Worker {
+	if workersCount < 1 {
+		workersCount = 1
 	}
 	if logger == nil {
 		logger = slog.Default()
@@ -31,77 +31,47 @@ func New(s store.Store, e executor.Executor, concurrency int, pollInterval time.
 		store:        s,
 		exec:         e,
 		logger:       logger,
-		concurrency:  concurrency,
-		pollInterval: pollInterval,
-		tasks:        make(chan string),
+		workersCount: workersCount,
+		queue:        q,
 	}
 }
 
 func (w *Worker) Run(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	defer w.queue.Close()
 
-	w.logger.Debug("starting poller")
-	var poller sync.WaitGroup
-	poller.Add(1)
-	go func() {
-		defer poller.Done()
-		w.poll(ctx)
-	}()
-
-	w.logger.Debug("starting workers", "count", w.concurrency)
-	var workers sync.WaitGroup
-	for i := 0; i < w.concurrency; i++ {
-		workers.Add(1)
+	w.logger.Debug("starting workers", "count", w.workersCount)
+	var wg sync.WaitGroup
+	for i := 0; i < w.workersCount; i++ {
+		wg.Add(1)
 		go func() {
-			defer workers.Done()
-			w.consume()
+			defer wg.Done()
+			w.consume(ctx)
 		}()
 	}
 
 	<-ctx.Done()
 	w.logger.Info("shutdown: waiting for running tasks")
-	poller.Wait()
-	w.logger.Debug("poller stopped")
-	close(w.tasks)
-	workers.Wait()
+	wg.Wait()
 	w.logger.Debug("all workers finished")
 }
 
-func (w *Worker) poll(ctx context.Context) {
-	ticker := time.NewTicker(w.pollInterval)
-	defer ticker.Stop()
-	w.scan(ctx)
+func (w *Worker) consume(ctx context.Context) {
 	for {
-		select {
-		case <-ticker.C:
-			w.scan(ctx)
-		case <-ctx.Done():
-			return
+		id, err := w.queue.Pop(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			w.logger.Error("failed to pop task from queue", "error", err)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Second):
+			}
+			continue
 		}
-	}
-}
-
-func (w *Worker) scan(ctx context.Context) {
-	ids, err := w.store.ListPending(ctx)
-	if err != nil {
-		w.logger.Error("failed to scan for pending tasks", "error", err)
-		return
-	}
-	if len(ids) > 0 {
-		w.logger.Debug("found pending tasks", "count", len(ids))
-	}
-	for _, id := range ids {
-		select {
-		case w.tasks <- id:
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-func (w *Worker) consume() {
-	for id := range w.tasks {
 		w.process(id)
 	}
 }

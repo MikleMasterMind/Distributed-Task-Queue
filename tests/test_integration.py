@@ -4,10 +4,13 @@ import uuid
 
 import pytest
 
+from conftest import REQUIRE_REDIS
+
 pytestmark = [
     pytest.mark.skipif(
         shutil.which("go") is None, reason="go toolchain is required for integration tests"
     ),
+    REQUIRE_REDIS,
 ]
 
 
