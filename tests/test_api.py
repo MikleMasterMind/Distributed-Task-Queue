@@ -1,5 +1,4 @@
 import pytest
-from fastapi.testclient import TestClient
 
 from api.schemas.tasks import TaskStatus
 from app import app
@@ -7,12 +6,8 @@ from repository import FileTaskRepository, get_task_repository
 
 
 @pytest.fixture()
-def client(tmp_path):
-    repo = FileTaskRepository(tmp_path)
-    app.dependency_overrides[get_task_repository] = lambda: repo
-    with TestClient(app) as c:
-        yield c
-    app.dependency_overrides.clear()
+def client(api_client):
+    return api_client
 
 
 def test_create_task(client):

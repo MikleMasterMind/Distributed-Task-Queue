@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -13,9 +15,13 @@ type Config struct {
 	Concurrency  int
 	PollInterval time.Duration
 	LogLevel     string
+	QueueType    string
+	RedisURL     string
+	QueueKey     string
 }
 
 func Load() Config {
+	_ = godotenv.Load()
 	dir := defaultTasksDir()
 	if dir == "" {
 		dir = "data/tasks"
@@ -24,12 +30,18 @@ func Load() Config {
 	concurrency := flag.Int("concurrency", envIntOrDefault("CONCURRENCY", 4), "number of concurrently running tasks")
 	pollInterval := flag.Duration("poll-interval", time.Duration(envIntOrDefault("POLL_INTERVAL_MS", 1000))*time.Millisecond, "interval between directory scans")
 	logLevel := flag.String("log-level", envOrDefault("LOG_LEVEL", "info"), "log level: debug, info, warn, error")
+	queueType := flag.String("queue", envOrDefault("QUEUE_TYPE", "dir"), "queue backend: redis, dir")
+	redisURL := flag.String("redis-url", envOrDefault("REDIS_URL", "redis://localhost:6379/0"), "redis connection URL")
+	queueKey := flag.String("queue-key", envOrDefault("QUEUE_KEY", "dtq:tasks"), "redis list key for the task queue")
 	flag.Parse()
 	return Config{
 		TasksDir:     *tasksDir,
 		Concurrency:  *concurrency,
 		PollInterval: *pollInterval,
 		LogLevel:     *logLevel,
+		QueueType:    *queueType,
+		RedisURL:     *redisURL,
+		QueueKey:     *queueKey,
 	}
 }
 

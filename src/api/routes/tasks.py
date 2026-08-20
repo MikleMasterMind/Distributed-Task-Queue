@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -12,8 +13,11 @@ from api.schemas.tasks import (
     TaskStatus,
     TaskType,
 )
+from taskqueue import TaskQueue, get_task_queue
 from repository import TaskRepository, get_task_repository
 from repository.base import TaskNotFoundError, TaskNotPendingError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -28,6 +32,7 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 def create_task(
     body: TaskCreate,
     repo: TaskRepository = Depends(get_task_repository),
+    queue: TaskQueue = Depends(get_task_queue),
 ) -> TaskCreated:
     task = TaskOut(
         id=str(uuid.uuid4()),
@@ -39,6 +44,16 @@ def create_task(
         created_at=datetime.now(timezone.utc),
     )
     repo.create(task)
+    try:
+        queue.push(task.id)
+    except Exception:
+        logger.exception("failed to enqueue task", extra={"task_id": task.id})
+        try:
+            repo.delete(task.id)
+        except Exception:
+            pass
+        raise HTTPException(status_code=503, detail="task queue unavailable")
+    logger.info("task enqueued", extra={"task_id": task.id})
     return TaskCreated(id=task.id, status=task.status)
 
 
@@ -99,6 +114,7 @@ def get_task(
 def delete_task(
     task_id: str,
     repo: TaskRepository = Depends(get_task_repository),
+    queue: TaskQueue = Depends(get_task_queue),
 ) -> Response:
     try:
         repo.delete(task_id)
@@ -106,4 +122,8 @@ def delete_task(
         raise HTTPException(status_code=404, detail="task not found")
     except TaskNotPendingError:
         raise HTTPException(status_code=409, detail="task already started")
+    try:
+        queue.remove(task_id)
+    except Exception:
+        logger.exception("failed to remove task from queue", extra={"task_id": task_id})
     return Response(status_code=204)

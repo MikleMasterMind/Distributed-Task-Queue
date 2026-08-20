@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"distributed-task-queue/worker/internal/executor"
+	"distributed-task-queue/worker/internal/queue"
 	"distributed-task-queue/worker/internal/store"
 	"distributed-task-queue/worker/internal/task"
 )
@@ -53,7 +54,8 @@ func startWorker(t *testing.T, dir string, concurrency int) (*Worker, context.Ca
 	t.Helper()
 	s := store.NewFileStore(dir, testLogger)
 	e := executor.NewDispatcher(testLogger)
-	w := New(s, e, concurrency, 5*time.Millisecond, testLogger)
+	q := queue.NewDir(s.ListPending, 5*time.Millisecond, testLogger)
+	w := New(s, e, q, concurrency, testLogger)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() {
@@ -158,7 +160,8 @@ func TestGracefulShutdown(t *testing.T) {
 
 	s := store.NewFileStore(dir, testLogger)
 	e := executor.NewDispatcher(testLogger)
-	w := New(s, e, 1, 5*time.Millisecond, testLogger)
+	q := queue.NewDir(s.ListPending, 5*time.Millisecond, testLogger)
+	w := New(s, e, q, 1, testLogger)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() {
@@ -211,7 +214,8 @@ func TestWorkerLogsTaskResult(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&buf, nil))
 	s := store.NewFileStore(dir, logger)
 	e := executor.NewDispatcher(logger)
-	w := New(s, e, 1, 5*time.Millisecond, logger)
+	q := queue.NewDir(s.ListPending, 5*time.Millisecond, logger)
+	w := New(s, e, q, 1, logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
