@@ -12,10 +12,23 @@
 cp .env.example .env          # при необходимости
 docker compose up -d redis    # поднять Redis
 uv sync --extra dev
+```
+
+Запуск API:
+
+```bash
 uv run distributed-task-queue
 ```
 
-API будет доступен на `http://0.0.0.0:8000` (Swagger UI — `/docs`).
+Запуск Go-worker (в отдельном терминале):
+
+```bash
+cd worker
+go build -o worker ./cmd/worker
+./worker --queue=redis
+```
+
+API будет доступен на `http://0.0.0.0:8000` (Swagger UI — `/docs`). Worker забирает задачи из Redis и выполняет их, записывая результат в `data/tasks/`.
 
 Конфигурация читается из `.env` (см. `.env.example`):
 
