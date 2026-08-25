@@ -51,6 +51,7 @@ V1 is in progress: the FastAPI task API, Redis queue and Go worker are implement
 ## Commands
 
 - Install deps: `uv sync --extra dev`
+- Generate docker-compose.yml: `./scripts/gen-docker-compose.sh`
 - Start Redis: `docker compose up -d redis`
 - Start PostgreSQL: `docker compose up -d postgres`
 - Run API: `DATABASE_URL=postgresql+asyncpg://dtq:dtq@localhost:5432/dtq uv run distributed-task-queue` (http://0.0.0.0:8000, Swagger at `/docs`)
