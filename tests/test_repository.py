@@ -1,12 +1,10 @@
 import uuid
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 import pytest
 
 from api.schemas.tasks import TaskFilter, TaskOut, TaskStatus
-from repository import FileTaskRepository
-from repository.base import TaskNotFoundError, TaskNotPendingError
+from repository.base import TaskNotFoundError, TaskNotPendingError, TaskRepository
 
 
 def make_task(
@@ -29,55 +27,52 @@ def make_task(
     )
 
 
-def test_create_and_get(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_create_and_get(repo: TaskRepository):
     task = make_task()
     repo.create(task)
     assert repo.get(task.id) == task
-    assert (tmp_path / f"{task.id}.json").exists()
 
 
-def test_get_missing(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_get_missing(repo: TaskRepository):
     assert repo.get("missing") is None
 
 
-def test_delete_pending(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_delete_pending(repo: TaskRepository):
     task = make_task()
     repo.create(task)
     assert repo.delete(task.id) == task
     assert repo.get(task.id) is None
-    assert not (tmp_path / f"{task.id}.json").exists()
 
 
-def test_delete_missing(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_delete_missing(repo: TaskRepository):
     with pytest.raises(TaskNotFoundError):
         repo.delete("missing")
 
 
 @pytest.mark.parametrize("status", [TaskStatus.RUNNING, TaskStatus.SUCCESS, TaskStatus.FAILED])
-def test_delete_not_pending(tmp_path: Path, status: TaskStatus):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_delete_not_pending(repo: TaskRepository, status: TaskStatus):
     task = make_task(status=status)
     repo.create(task)
     with pytest.raises(TaskNotPendingError):
         repo.delete(task.id)
     assert repo.get(task.id) is not None
-    assert (tmp_path / f"{task.id}.json").exists()
 
 
-def test_list_empty(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_list_empty(repo: TaskRepository):
     page = repo.list_tasks(TaskFilter(), limit=20, cursor=None)
     assert page.items == []
     assert page.next_token is None
     assert page.limit == 20
 
 
-def test_list_sorted_asc(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_list_sorted_asc(repo: TaskRepository):
     base = datetime(2026, 1, 1, tzinfo=timezone.utc)
     for i in range(3):
         repo.create(make_task(created_at=base + timedelta(hours=i)))
@@ -87,8 +82,8 @@ def test_list_sorted_asc(tmp_path: Path):
     assert created == sorted(created)
 
 
-def test_list_pagination(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_list_pagination(repo: TaskRepository):
     base = datetime(2026, 1, 1, tzinfo=timezone.utc)
     for i in range(5):
         repo.create(make_task(created_at=base + timedelta(hours=i)))
@@ -113,24 +108,24 @@ def test_list_pagination(tmp_path: Path):
     assert created == sorted(created)
 
 
-def test_list_filter_by_status(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_list_filter_by_status(repo: TaskRepository):
     repo.create(make_task(status=TaskStatus.PENDING))
     repo.create(make_task(status=TaskStatus.SUCCESS))
     page = repo.list_tasks(TaskFilter(status=TaskStatus.SUCCESS), limit=20, cursor=None)
     assert [t.status for t in page.items] == [TaskStatus.SUCCESS]
 
 
-def test_list_filter_by_type(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_list_filter_by_type(repo: TaskRepository):
     repo.create(make_task(type="echo"))
     repo.create(make_task(type="sleep", payload={"seconds": 5}))
     page = repo.list_tasks(TaskFilter(type="sleep"), limit=20, cursor=None)
     assert [t.type for t in page.items] == ["sleep"]
 
 
-def test_list_filter_by_created_range(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_list_filter_by_created_range(repo: TaskRepository):
     base = datetime(2026, 1, 1, tzinfo=timezone.utc)
     repo.create(make_task(created_at=base))
     repo.create(make_task(created_at=base + timedelta(days=1)))
@@ -140,8 +135,8 @@ def test_list_filter_by_created_range(tmp_path: Path):
     assert len(page.items) == 2
 
 
-def test_list_filter_by_started_range(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_list_filter_by_started_range(repo: TaskRepository):
     started = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
     repo.create(make_task(started_at=started, finished_at=started))
     repo.create(make_task())
@@ -154,8 +149,8 @@ def test_list_filter_by_started_range(tmp_path: Path):
     assert page.items[0].started_at == started
 
 
-def test_list_filter_by_finished_range(tmp_path: Path):
-    repo = FileTaskRepository(tmp_path)
+@pytest.mark.usefixtures("repo")
+def test_list_filter_by_finished_range(repo: TaskRepository):
     started = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
     finished = datetime(2026, 1, 1, 12, 5, tzinfo=timezone.utc)
     repo.create(make_task(started_at=started, finished_at=finished))

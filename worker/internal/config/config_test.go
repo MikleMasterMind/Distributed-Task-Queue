@@ -2,20 +2,29 @@ package config
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 )
 
-func TestDefaultTasksDirFromWorkerDir(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
+func TestLoadReadsEnv(t *testing.T) {
+	os.Setenv("DATABASE_URL", "postgres://test:test@localhost:5432/test")
+	os.Setenv("STORE_TYPE", "file")
+	os.Setenv("QUEUE_TYPE", "redis")
+	os.Setenv("CONCURRENCY", "8")
+	defer os.Unsetenv("DATABASE_URL")
+	defer os.Unsetenv("STORE_TYPE")
+	defer os.Unsetenv("QUEUE_TYPE")
+	defer os.Unsetenv("CONCURRENCY")
+
+	os.Args = []string{"test"}
+	cfg := Load()
+
+	if cfg.DatabaseURL != "postgres://test:test@localhost:5432/test" {
+		t.Errorf("DatabaseURL = %q", cfg.DatabaseURL)
 	}
-	if filepath.Base(wd) != "worker" {
-		t.Skip("test must run from the worker directory")
+	if cfg.StoreType != "file" {
+		t.Errorf("StoreType = %q, want %q", cfg.StoreType, "file")
 	}
-	want := filepath.Join(filepath.Dir(wd), "data", "tasks")
-	if got := defaultTasksDir(); got != want {
-		t.Errorf("defaultTasksDir() = %s, want %s", got, want)
+	if cfg.Concurrency != 8 {
+		t.Errorf("Concurrency = %d, want 8", cfg.Concurrency)
 	}
 }
