@@ -1,32 +1,32 @@
 # Distributed Task Queue — Roadmap
 
-## Цель
+## Goal
 
-После завершения MVP постепенно превратить проект из простой очереди задач в полноценную распределённую систему выполнения фоновых задач.
+After completing the MVP, gradually transform the project from a simple task queue into a full-featured distributed background task execution system.
 
-Расширение должно происходить поэтапно. Каждый этап должен добавлять отдельную архитектурную возможность, которую можно протестировать и продемонстрировать.
+Expansion should happen in stages. Each stage should add a separate architectural capability that can be tested and demonstrated.
 
 ---
 
 # V1 — MVP
 
-**Цель:** базовое выполнение задач.
+**Goal:** basic task execution.
 
-Уже реализовано:
+Already implemented:
 
 * FastAPI;
 * PostgreSQL;
 * Redis Queue;
 * Go Worker;
 * Worker Pool;
-* несколько типов задач;
-* статусы `PENDING`, `RUNNING`, `SUCCESS`, `FAILED`;
-* обработка ошибок;
+* multiple task types;
+* statuses `PENDING`, `RUNNING`, `SUCCESS`, `FAILED`;
+* error handling;
 * graceful shutdown;
 * Docker Compose;
-* unit и integration tests.
+* unit and integration tests.
 
-Архитектура:
+Architecture:
 
 ```text
 FastAPI
@@ -42,17 +42,17 @@ FastAPI
 
 ---
 
-# V2 — Надёжность выполнения
+# V2 — Execution Reliability
 
-**Цель:** система должна корректно работать при падении worker'ов.
+**Goal:** the system should work correctly when workers crash.
 
-Это первый этап, где появляются настоящие distributed-systems проблемы.
+This is the first stage where real distributed-systems problems appear.
 
 ## 2.1 Retry
 
-Добавить автоматический повтор выполнения задачи.
+Add automatic task retry.
 
-Например:
+For example:
 
 ```text
 Task
@@ -68,7 +68,7 @@ Task
  └── attempt 3 → SUCCESS
 ```
 
-Добавить:
+Add:
 
 ```yaml
 retry:
@@ -76,7 +76,7 @@ retry:
   backoff: exponential
 ```
 
-Поддержать:
+Support:
 
 * `max_attempts`;
 * exponential backoff;
@@ -87,21 +87,21 @@ retry:
 
 ## 2.2 Visibility Timeout
 
-Проблема:
+Problem:
 
 ```text
 Worker A
    │
-   └── получил Task 123
+   └── received Task 123
           │
           X CRASH
 ```
 
-Task не должна потеряться.
+The task must not be lost.
 
-При получении задача становится временно невидимой для других workers.
+When received, the task becomes temporarily invisible to other workers.
 
-Если worker не завершил её за определённое время:
+If the worker doesn't complete it within a specified time:
 
 ```text
 visibility timeout
@@ -114,7 +114,7 @@ Task → QUEUED
 
 ## 2.3 Dead Letter Queue
 
-Если задача постоянно падает:
+If a task keeps failing:
 
 ```text
 attempt 1 → FAILED
@@ -123,13 +123,13 @@ attempt 3 → FAILED
 attempt 4 → FAILED
 ```
 
-Она должна попасть в:
+It should go to:
 
 ```text
 Dead Letter Queue
 ```
 
-Добавить API:
+Add API:
 
 ```http
 GET /dead-letter/tasks
@@ -138,16 +138,16 @@ POST /dead-letter/tasks/{id}/retry
 
 ---
 
-## 2.4 Task timeout
+## 2.4 Task Timeout
 
-Добавить ограничение времени выполнения:
+Add execution time limit:
 
 ```yaml
 task:
   timeout: 60s
 ```
 
-Если задача работает слишком долго:
+If a task runs too long:
 
 ```text
 RUNNING
@@ -161,11 +161,11 @@ TIMEOUT
 
 # V3 — Worker Management
 
-**Цель:** превратить набор workers в управляемый кластер.
+**Goal:** turn a set of workers into a managed cluster.
 
 ## 3.1 Worker Registration
 
-При запуске worker регистрируется:
+On startup, the worker registers:
 
 ```text
 Worker
@@ -174,7 +174,7 @@ Worker
 Control Plane
 ```
 
-Информация:
+Information:
 
 ```json
 {
@@ -190,7 +190,7 @@ Control Plane
 
 ## 3.2 Heartbeat
 
-Worker регулярно сообщает:
+The worker regularly reports:
 
 ```text
 Worker
@@ -201,7 +201,7 @@ Worker
    └── heartbeat
 ```
 
-Если heartbeat перестал приходить:
+If heartbeats stop coming:
 
 ```text
 Worker
@@ -212,13 +212,13 @@ Worker
 DEAD
 ```
 
-Это позволит обнаруживать падение worker'ов независимо от task timeout.
+This allows detecting worker crashes independently of task timeout.
 
 ---
 
 ## 3.3 Worker Status
 
-Добавить состояния:
+Add states:
 
 ```text
 STARTING
@@ -228,13 +228,13 @@ DRAINING
 DEAD
 ```
 
-Например:
+For example:
 
 ```http
 GET /workers
 ```
 
-Ответ:
+Response:
 
 ```json
 [
@@ -251,7 +251,7 @@ GET /workers
 
 ## 3.4 Worker Graceful Drain
 
-Добавить возможность вывести worker из эксплуатации:
+Add the ability to take a worker out of service:
 
 ```http
 POST /workers/{id}/drain
@@ -262,25 +262,25 @@ Worker:
 ```text
 DRAINING
    │
-   ├── перестаёт принимать новые задачи
+   ├── stops accepting new tasks
    │
-   ├── завершает текущие
+   ├── finishes current ones
    │
    ▼
 STOPPED
 ```
 
-Это позволит безопасно обновлять workers.
+This allows safely updating workers.
 
 ---
 
 # V4 — Advanced Queues
 
-**Цель:** сделать очередь более функциональной.
+**Goal:** make the queue more feature-rich.
 
 ## 4.1 Priority Queue
 
-Добавить приоритет:
+Add priority:
 
 ```text
 priority = 1
@@ -288,13 +288,13 @@ priority = 10
 priority = 100
 ```
 
-Worker сначала получает задачи с высоким приоритетом.
+The worker first receives high-priority tasks.
 
 ---
 
 ## 4.2 Multiple Queues
 
-Например:
+For example:
 
 ```text
 default
@@ -304,13 +304,13 @@ io
 ml
 ```
 
-Worker может подписаться на определённые queues:
+A worker can subscribe to specific queues:
 
 ```bash
 go-worker --queues=default,high-priority
 ```
 
-Другой:
+Another:
 
 ```bash
 go-worker --queues=cpu
@@ -320,7 +320,7 @@ go-worker --queues=cpu
 
 ## 4.3 Routing
 
-Добавить routing rules:
+Add routing rules:
 
 ```text
 task.type = image_processing
@@ -332,13 +332,13 @@ task.type = ml_inference
 ml queue
 ```
 
-Таким образом CPU-heavy задачи не будут мешать обычным задачам.
+This way CPU-heavy tasks won't interfere with regular tasks.
 
 ---
 
 # V5 — Scheduling
 
-**Цель:** добавить отложенные и периодические задачи.
+**Goal:** add delayed and periodic tasks.
 
 ## 5.1 Delayed Tasks
 
@@ -353,13 +353,13 @@ POST /tasks
 }
 ```
 
-Task не должна появиться в обычной очереди до указанного времени.
+The task must not appear in the regular queue until the specified time.
 
 ---
 
 ## 5.2 Periodic Tasks
 
-Например:
+For example:
 
 ```yaml
 schedule:
@@ -368,7 +368,7 @@ schedule:
   cron: "0 * * * *"
 ```
 
-Scheduler создаёт задачи автоматически:
+The scheduler creates tasks automatically:
 
 ```text
 Scheduler
@@ -381,35 +381,35 @@ Scheduler
 
 ---
 
-# V6 — Idempotency и Exactly-once Semantics
+# V6 — Idempotency and Exactly-once Semantics
 
-**Цель:** исследовать проблему повторного выполнения задач.
+**Goal:** explore the problem of duplicate task execution.
 
-В распределённой системе возможна ситуация:
+In a distributed system, the following situation is possible:
 
 ```text
 Worker
   │
-  ├── выполняет task
+  ├── executes task
   │
-  ├── task завершилась
+  ├── task completes
   │
   X worker crash
   │
   ▼
-Queue считает task незавершённой
+Queue considers task incomplete
   │
   ▼
-Другой worker выполняет её повторно
+Another worker re-executes it
 ```
 
-Одна задача может быть выполнена дважды.
+A single task can be executed twice.
 
 ---
 
 ## 6.1 Idempotency Key
 
-Добавить:
+Add:
 
 ```json
 {
@@ -417,7 +417,7 @@ Queue считает task незавершённой
 }
 ```
 
-Повторная постановка:
+Repeated enqueueing:
 
 ```text
 payment-123
@@ -425,13 +425,13 @@ payment-123
 payment-123
 ```
 
-должна приводить к одному логическому выполнению.
+should result in a single logical execution.
 
 ---
 
-## 6.2 Документировать Delivery Semantics
+## 6.2 Document Delivery Semantics
 
-Явно определить:
+Explicitly define:
 
 ```text
 At-most-once
@@ -439,23 +439,23 @@ At-least-once
 Exactly-once
 ```
 
-В проекте желательно реализовать:
+The project should aim to implement:
 
 > **At-least-once delivery + idempotent task execution**
 
-и отдельно описать, почему полноценный exactly-once execution является сложной задачей в распределённых системах.
+and separately explain why full exactly-once execution is a hard problem in distributed systems.
 
 ---
 
 # V7 — Observability
 
-**Цель:** получить полноценное наблюдение за системой.
+**Goal:** achieve full system visibility.
 
 ## 7.1 Metrics
 
-Использовать Prometheus.
+Use Prometheus.
 
-Метрики:
+Metrics:
 
 ```text
 tasks_created_total
@@ -474,7 +474,7 @@ worker_busy_count
 
 ## 7.2 Grafana
 
-Создать dashboard:
+Create a dashboard:
 
 ```text
 ┌──────────────────────────────────────┐
@@ -494,9 +494,9 @@ worker_busy_count
 
 ## 7.3 Distributed Tracing
 
-Добавить OpenTelemetry.
+Add OpenTelemetry.
 
-Например:
+For example:
 
 ```text
 HTTP request
@@ -514,13 +514,13 @@ Go Worker
 Task execution
 ```
 
-В trace должно быть видно время каждого этапа.
+The trace should show the duration of each stage.
 
 ---
 
 # V8 — Control Plane / Worker Plane
 
-**Цель:** разделить архитектуру на две логические части.
+**Goal:** split the architecture into two logical parts.
 
 ```text
              Control Plane
@@ -543,25 +543,25 @@ Task execution
              Worker Plane
 ```
 
-Control Plane отвечает за управление.
+The Control Plane handles management.
 
-Worker Plane отвечает за выполнение.
+The Worker Plane handles execution.
 
 ---
 
 # V9 — Horizontal Scaling
 
-**Цель:** проверить масштабирование системы.
+**Goal:** test system scalability.
 
-Запустить:
+Run:
 
 ```text
 1 worker
 ```
 
-и измерить throughput.
+and measure throughput.
 
-Затем:
+Then:
 
 ```text
 2 workers
@@ -570,7 +570,7 @@ Worker Plane отвечает за выполнение.
 16 workers
 ```
 
-Сравнить:
+Compare:
 
 ```text
 workers | tasks/sec | p95 latency
@@ -581,7 +581,7 @@ workers | tasks/sec | p95 latency
 8       | 340       | 30 ms
 ```
 
-Важно не просто увеличить количество workers, а определить:
+The goal is not just to increase the number of workers, but to identify:
 
 * bottleneck;
 * CPU bottleneck;
@@ -593,16 +593,16 @@ workers | tasks/sec | p95 latency
 
 # V10 — Load Testing
 
-Добавить нагрузочные тесты.
+Add load tests.
 
-Например:
+For example:
 
 ```text
 10 000 tasks
 100 workers
 ```
 
-Проверить:
+Verify:
 
 * throughput;
 * latency;
@@ -611,21 +611,21 @@ workers | tasks/sec | p95 latency
 * memory consumption;
 * CPU usage.
 
-Можно использовать:
+Can use:
 
 * Locust;
 * k6;
-* собственный Go load generator.
+* custom Go load generator.
 
 ---
 
-# V11 — Собственный Message Broker
+# V11 — Custom Message Broker
 
-Это **опциональный advanced этап**.
+This is an **optional advanced stage**.
 
-После того как Redis-версия работает, заменить Redis собственной реализацией.
+After the Redis version works, replace Redis with a custom implementation.
 
-Например:
+For example:
 
 ```text
 Python API
@@ -645,7 +645,7 @@ Python API
        Workers
 ```
 
-Можно реализовать:
+Can implement:
 
 * TCP protocol;
 * message framing;
@@ -656,13 +656,13 @@ Python API
 * consumer groups;
 * batching.
 
-Это уже отдельный большой проект и **не является обязательной частью Task Queue**.
+This is already a separate large project and **not a mandatory part of Task Queue**.
 
 ---
 
 # V12 — Distributed Broker
 
-Если хочется ещё глубже погрузиться в distributed systems:
+If you want to dive even deeper into distributed systems:
 
 ```text
              Broker Cluster
@@ -676,7 +676,7 @@ Python API
  Broker 2      Broker 3
 ```
 
-Исследовать:
+Explore:
 
 * replication;
 * leader election;
@@ -685,15 +685,15 @@ Python API
 * consistency;
 * recovery.
 
-Этот этап лучше рассматривать как отдельный экспериментальный проект.
+This stage is best treated as a separate experimental project.
 
 ---
 
-# Приоритет реализации
+# Implementation Priority
 
-Не стоит реализовывать все этапы подряд.
+Don't implement all stages sequentially.
 
-Оптимальный путь:
+Optimal path:
 
 ```text
 MVP
@@ -744,40 +744,40 @@ V8 Scaling
  └── Load Testing
 ```
 
-После этого проект уже будет достаточно серьёзным для резюме.
+After this, the project will be substantial enough for a resume.
 
 ---
 
-# Что я бы НЕ делал
+# What I Would NOT Do
 
-Не нужно превращать проект в попытку создать Kubernetes + Kafka + Celery одновременно.
+Don't turn the project into an attempt to create Kubernetes + Kafka + Celery simultaneously.
 
-Особенно не стоит без необходимости добавлять:
+Especially avoid adding unnecessarily:
 
 * Kubernetes;
 * service mesh;
-* несколько десятков микросервисов;
-* собственную БД;
-* собственный consensus protocol;
-* сложную UI-панель.
+* dozens of microservices;
+* custom database;
+* custom consensus protocol;
+* complex UI dashboard.
 
-Лучше иметь:
+Better to have:
 
 ```text
-10 хорошо реализованных механизмов
+10 well-implemented mechanisms
 ```
 
-чем:
+than:
 
 ```text
-50 технологий, соединённых Docker Compose.
+50 technologies connected by Docker Compose.
 ```
 
 ---
 
-# Финальная версия
+# Final Version
 
-Если довести проект до разумного production-like состояния, итоговая архитектура может выглядеть так:
+If brought to a reasonable production-like state, the final architecture might look like this:
 
 ```text
                          ┌───────────────┐
@@ -814,44 +814,44 @@ V8 Scaling
        └─────────────────────────┘
 ```
 
-Главная идея roadmap — **каждая следующая версия должна решать конкретную проблему распределённых систем**:
+The main idea of the roadmap is that **each new version should solve a specific distributed systems problem**:
 
 ```text
 MVP
  ↓
-"Как выполнить задачу?"
+"How to execute a task?"
 
 Reliability
  ↓
-"Что будет, если worker упадёт?"
+"What happens if a worker crashes?"
 
 Worker Management
  ↓
-"Как управлять множеством workers?"
+"How to manage multiple workers?"
 
 Advanced Queues
  ↓
-"Как распределять разные типы нагрузки?"
+"How to route different workload types?"
 
 Scheduling
  ↓
-"Как выполнять задачи в будущем?"
+"How to execute tasks in the future?"
 
 Idempotency
  ↓
-"Что делать с повторным выполнением?"
+"What to do about duplicate execution?"
 
 Observability
  ↓
-"Как понять, что происходит в системе?"
+"How to understand what's happening in the system?"
 
 Scaling
  ↓
-"Как система ведёт себя под нагрузкой?"
+"How does the system behave under load?"
 
 Custom Broker
  ↓
-"Как работает сама очередь изнутри?"
+"How does the queue work internally?"
 ```
 
-Именно последняя часть особенно интересна с учётом твоего образования: если после основного проекта сделать отдельную ветку с **собственным message broker на Go**, получится очень хороший материал для обсуждения архитектуры, concurrency, сетевого взаимодействия и отказоустойчивости.
+The last part is especially interesting given your background: if after the main project you create a separate branch with a **custom message broker in Go**, it would make excellent material for discussing architecture, concurrency, network communication, and fault tolerance.
