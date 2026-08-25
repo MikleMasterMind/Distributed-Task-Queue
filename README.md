@@ -10,6 +10,7 @@ Requires [uv](https://docs.astral.sh/uv/), Python 3.12+, Go 1.26+, Redis, Postgr
 
 ```bash
 cp .env.example .env          # configure DATABASE_URL, REDIS_URL, etc.
+./scripts/gen-docker-compose.sh  # generate docker-compose.yml from template
 docker compose up -d redis postgres  # start Redis and PostgreSQL
 uv sync --extra dev
 ```
@@ -41,6 +42,17 @@ Configuration is read from `.env` (see `.env.example`):
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
 | `QUEUE_KEY` | `dtq:tasks` | Redis list key for the task queue |
 | `LOG_LEVEL` | `info` | API log level (`debug`, `info`, `warning`, `error`, `critical`) |
+| `REDIS_PORT` | `6379` | Redis host port (Docker) |
+| `POSTGRES_PORT` | `5432` | PostgreSQL host port (Docker) |
+| `POSTGRES_DB` | `dtq` | PostgreSQL database name (Docker) |
+| `POSTGRES_USER` | `dtq` | PostgreSQL user (Docker) |
+| `POSTGRES_PASSWORD` | `dtq` | PostgreSQL password (Docker) |
+| `REDIS_HEALTHCHECK_INTERVAL` | `5s` | Redis healthcheck interval (Docker) |
+| `REDIS_HEALTHCHECK_TIMEOUT` | `3s` | Redis healthcheck timeout (Docker) |
+| `REDIS_HEALTHCHECK_RETRIES` | `5` | Redis healthcheck retries (Docker) |
+| `POSTGRES_HEALTHCHECK_INTERVAL` | `5s` | PostgreSQL healthcheck interval (Docker) |
+| `POSTGRES_HEALTHCHECK_TIMEOUT` | `3s` | PostgreSQL healthcheck timeout (Docker) |
+| `POSTGRES_HEALTHCHECK_RETRIES` | `5` | PostgreSQL healthcheck retries (Docker) |
 
 ## Request Examples
 
