@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	"distributed-task-queue/worker/internal/config"
-	"distributed-task-queue/worker/internal/store"
 )
 
 type Queue interface {
@@ -13,17 +12,13 @@ type Queue interface {
 	Close() error
 }
 
-func NewQueue(cfg config.Config, s store.Store, logger *slog.Logger) (Queue, error) {
+func NewQueue(cfg config.Config, logger *slog.Logger) (Queue, error) {
 	return New(
 		QueueConfig{
 			Kind: cfg.QueueType,
 			Redis: RedisConfig{
 				URL: cfg.RedisURL,
 				Key: cfg.QueueKey,
-			},
-			Dir: DirConfig{
-				ListPending:  s.ListPending,
-				PollInterval: cfg.PollInterval,
 			},
 		},
 		logger,

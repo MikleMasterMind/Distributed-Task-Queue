@@ -31,7 +31,7 @@ func main() {
 
 	e := executor.NewDispatcher(logger)
 
-	q, err := queue.NewQueue(cfg, s, logger)
+	q, err := queue.NewQueue(cfg, logger)
 	if err != nil {
 		logger.Error("failed to create queue", "error", err)
 		os.Exit(1)
@@ -39,7 +39,7 @@ func main() {
 
 	w := worker.New(s, e, q, cfg.Concurrency, logger)
 
-	logger.Info("worker started", "queue", cfg.QueueType, "concurrency", cfg.Concurrency, "poll_interval", cfg.PollInterval.String())
+	logger.Info("worker started", "queue", cfg.QueueType, "concurrency", cfg.Concurrency)
 	w.Run(ctx)
 	logger.Info("worker stopped")
 }

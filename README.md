@@ -23,10 +23,10 @@ uv run distributed-task-queue
 Starting the Go worker (in a separate terminal):
 
 ```bash
-cd worker
-go build -o worker ./cmd/worker
-./worker --queue=redis --store=postgres
+cd worker && go build -o worker ./cmd/worker && ./worker
 ```
+
+The worker reads configuration from `.env` in the project root (falls back to `worker/.env`). All settings can also be overridden via flags.
 
 The API will be available at `http://0.0.0.0:8000` (Swagger UI at `/docs`). The worker fetches tasks from Redis and executes them, writing results to PostgreSQL.
 
@@ -36,7 +36,7 @@ Configuration is read from `.env` (see `.env.example`):
 | --- | --- | --- |
 | `DATABASE_URL` | — | PostgreSQL connection URL (required) |
 | `DB_AUTO_CREATE` | `true` | Auto-create tables on startup |
-| `STORE_TYPE` | `postgres` | Go worker store backend: `postgres`, `file` |
+| `STORE_TYPE` | `postgres` | Go worker store backend: `postgres` |
 | `QUEUE_TYPE` | `redis` | API queue backend: `redis`, `memory` |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
 | `QUEUE_KEY` | `dtq:tasks` | Redis list key for the task queue |
@@ -91,9 +91,7 @@ Supported task types: `echo` (`message`), `sleep` (`seconds`), `fibonacci` (`n`)
 The worker receives task IDs from Redis (`BRPOP`) and executes them in parallel (number of goroutines is configured via configuration). One task's failure doesn't affect others.
 
 ```bash
-cd worker
-go build -o worker ./cmd/worker
-./worker --queue=redis
+cd worker && go build -o worker ./cmd/worker && ./worker
 ```
 
 Parameters (flag `--name` or environment variable from `.env`):
@@ -105,7 +103,6 @@ Parameters (flag `--name` or environment variable from `.env`):
 - `--redis-url` (env `REDIS_URL`) — Redis connection URL, default `redis://localhost:6379/0`;
 - `--queue-key` (env `QUEUE_KEY`) — queue key in Redis, default `dtq:tasks`;
 - `--concurrency` (env `CONCURRENCY`) — number of concurrent tasks, default `4`;
-- `--poll-interval` (env `POLL_INTERVAL_MS`) — polling interval, default `1s`;
 - `--log-level` (env `LOG_LEVEL`) — log level (`debug`, `info`, `warn`, `error`), default `info`.
 
 The queue backend is pluggable: to add a new one, implement the `Queue` interface (`Pop(ctx) (string, error)`) and register it in `worker/internal/queue/factory.go`.
@@ -115,8 +112,7 @@ The worker shuts down on `SIGINT`/`SIGTERM`: stops fetching new tasks, waits for
 Tests:
 
 ```bash
-cd worker
-go test ./...
+cd worker && go test ./...
 ```
 
 ## Tests
