@@ -4,7 +4,7 @@ import (
 	"flag"
 	"os"
 	"strconv"
-	"time"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -14,7 +14,6 @@ type Config struct {
 	DBAutoCreate bool
 	StoreType    string
 	Concurrency  int
-	PollInterval time.Duration
 	LogLevel     string
 	QueueType    string
 	RedisURL     string
@@ -22,23 +21,23 @@ type Config struct {
 }
 
 func Load() Config {
-	_ = godotenv.Load()
+	if err := godotenv.Load(); err != nil {
+		_ = godotenv.Load("../.env")
+	}
 	databaseURL := flag.String("database-url", envOrDefault("DATABASE_URL", ""), "PostgreSQL connection URL")
 	dbAutoCreate := flag.Bool("db-auto-create", envBoolOrDefault("DB_AUTO_CREATE", true), "auto-create database tables")
-	storeType := flag.String("store", envOrDefault("STORE_TYPE", "postgres"), "store backend: postgres, file")
+	storeType := flag.String("store", envOrDefault("STORE_TYPE", "postgres"), "store backend: postgres")
 	concurrency := flag.Int("concurrency", envIntOrDefault("CONCURRENCY", 4), "number of concurrently running tasks")
-	pollInterval := flag.Duration("poll-interval", time.Duration(envIntOrDefault("POLL_INTERVAL_MS", 1000))*time.Millisecond, "interval between polls")
 	logLevel := flag.String("log-level", envOrDefault("LOG_LEVEL", "info"), "log level: debug, info, warn, error")
-	queueType := flag.String("queue", envOrDefault("QUEUE_TYPE", "redis"), "queue backend: redis, dir")
+	queueType := flag.String("queue", envOrDefault("QUEUE_TYPE", "redis"), "queue backend: redis")
 	redisURL := flag.String("redis-url", envOrDefault("REDIS_URL", "redis://localhost:6379/0"), "redis connection URL")
 	queueKey := flag.String("queue-key", envOrDefault("QUEUE_KEY", "dtq:tasks"), "redis list key for the task queue")
 	flag.Parse()
 	return Config{
-		DatabaseURL:  *databaseURL,
+		DatabaseURL:  stripDriverSuffix(*databaseURL),
 		DBAutoCreate: *dbAutoCreate,
 		StoreType:    *storeType,
 		Concurrency:  *concurrency,
-		PollInterval: *pollInterval,
 		LogLevel:     *logLevel,
 		QueueType:    *queueType,
 		RedisURL:     *redisURL,
@@ -69,4 +68,13 @@ func envBoolOrDefault(key string, fallback bool) bool {
 		}
 	}
 	return fallback
+}
+
+func stripDriverSuffix(url string) string {
+	if i := strings.Index(url, "+"); i != -1 {
+		if j := strings.Index(url[i:], "://"); j != -1 {
+			return url[:i] + url[i+j:]
+		}
+	}
+	return url
 }
