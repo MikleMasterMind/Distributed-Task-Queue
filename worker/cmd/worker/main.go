@@ -22,7 +22,13 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	s := store.NewFileStore(cfg.TasksDir, logger)
+	s, err := store.NewFromConfig(cfg, logger)
+	if err != nil {
+		logger.Error("failed to create store", "error", err)
+		os.Exit(1)
+	}
+	defer s.Close()
+
 	e := executor.NewDispatcher(logger)
 
 	q, err := queue.NewQueue(cfg, s, logger)
@@ -33,7 +39,7 @@ func main() {
 
 	w := worker.New(s, e, q, cfg.Concurrency, logger)
 
-	logger.Info("worker started", "queue", cfg.QueueType, "tasks_dir", cfg.TasksDir, "concurrency", cfg.Concurrency, "poll_interval", cfg.PollInterval.String())
+	logger.Info("worker started", "queue", cfg.QueueType, "concurrency", cfg.Concurrency, "poll_interval", cfg.PollInterval.String())
 	w.Run(ctx)
 	logger.Info("worker stopped")
 }

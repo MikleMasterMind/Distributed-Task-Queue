@@ -2,7 +2,7 @@ import pytest
 
 from api.schemas.tasks import TaskStatus
 from app import app
-from repository import FileTaskRepository, get_task_repository
+from repository import TaskRepository, get_task_repository
 
 
 @pytest.fixture()
@@ -60,7 +60,7 @@ def test_delete_not_pending_task(client, status: TaskStatus):
     created = client.post(
         "/tasks", json={"type": "echo", "payload": {"message": "hello"}}
     ).json()
-    repo: FileTaskRepository = app.dependency_overrides[get_task_repository]()
+    repo: TaskRepository = app.dependency_overrides[get_task_repository]()
     task = repo.get(created["id"])
     repo.create(task.model_copy(update={"status": status}))
     resp = client.delete(f"/tasks/{created['id']}")

@@ -13,12 +13,16 @@ dependencies = [
     "python-dotenv",
     "redis",
     "uvicorn",
+    "sqlalchemy[asyncio]",
+    "asyncpg",
+    "psycopg2-binary>=2.9.12",
 ]
 
 [project.optional-dependencies]
 dev = [
     "httpx2",
     "pytest",
+    "pytest-asyncio",
 ]
 
 [project.scripts]
@@ -34,4 +38,4 @@ py-modules = ["app", "config", "main"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["api*", "repository*", "taskqueue*"]
+include = ["api*", "db*", "repository*", "taskqueue*"]

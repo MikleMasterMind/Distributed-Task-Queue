@@ -18,4 +18,5 @@ type Store interface {
 	Claim(ctx context.Context, id string, startedAt time.Time) (task.Task, error)
 	Complete(ctx context.Context, id string, result map[string]any, finishedAt time.Time) error
 	Fail(ctx context.Context, id string, errMsg string, finishedAt time.Time) error
+	Close() error
 }

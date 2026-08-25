@@ -2,15 +2,15 @@
 
 Distributed task queue. HTTP API in Python (FastAPI), Redis queue, and Go worker for task execution.
 
-Architecture: `FastAPI → Redis Queue → Go Workers → file storage`. When a task is created, FastAPI saves its state and places the `task_id` into a Redis queue. The Go worker receives the ID from the queue (blocking `BRPOP`), fetches the task, executes it, and writes the result. Task state is stored in JSON files in the `data/` directory (one file `{task_id}.json` per task).
+Architecture: `FastAPI → Redis Queue → Go Workers → PostgreSQL`. When a task is created, FastAPI saves its state to PostgreSQL and places the `task_id` into a Redis queue. The Go worker receives the ID from the queue (blocking `BRPOP`), fetches the task, executes it, and writes the result back to PostgreSQL. Task state is stored in a `tasks` table.
 
 ## Setup
 
-Requires [uv](https://docs.astral.sh/uv/), Python 3.12+, Go 1.26+, and Redis (or Docker).
+Requires [uv](https://docs.astral.sh/uv/), Python 3.12+, Go 1.26+, Redis, PostgreSQL (or Docker).
 
 ```bash
-cp .env.example .env          # if needed
-docker compose up -d redis    # start Redis
+cp .env.example .env          # configure DATABASE_URL, REDIS_URL, etc.
+docker compose up -d redis postgres  # start Redis and PostgreSQL
 uv sync --extra dev
 ```
 
@@ -25,16 +25,18 @@ Starting the Go worker (in a separate terminal):
 ```bash
 cd worker
 go build -o worker ./cmd/worker
-./worker --queue=redis
+./worker --queue=redis --store=postgres
 ```
 
-The API will be available at `http://0.0.0.0:8000` (Swagger UI at `/docs`). The worker fetches tasks from Redis and executes them, writing results to `data/tasks/`.
+The API will be available at `http://0.0.0.0:8000` (Swagger UI at `/docs`). The worker fetches tasks from Redis and executes them, writing results to PostgreSQL.
 
 Configuration is read from `.env` (see `.env.example`):
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `DATA_DIR` | `data` | Base directory for task storage |
+| `DATABASE_URL` | — | PostgreSQL connection URL (required) |
+| `DB_AUTO_CREATE` | `true` | Auto-create tables on startup |
+| `STORE_TYPE` | `postgres` | Go worker store backend: `postgres`, `file` |
 | `QUEUE_TYPE` | `redis` | API queue backend: `redis`, `memory` |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
 | `QUEUE_KEY` | `dtq:tasks` | Redis list key for the task queue |
@@ -96,12 +98,14 @@ go build -o worker ./cmd/worker
 
 Parameters (flag `--name` or environment variable from `.env`):
 
-- `--queue` (env `QUEUE_TYPE`) — queue backend: `redis` or `dir` (directory polling, default `dir`);
+- `--database-url` (env `DATABASE_URL`) — PostgreSQL connection URL;
+- `--db-auto-create` (env `DB_AUTO_CREATE`) — auto-create tables, default `true`;
+- `--store` (env `STORE_TYPE`) — store backend: `postgres`;
+- `--queue` (env `QUEUE_TYPE`) — queue backend: `redis`;
 - `--redis-url` (env `REDIS_URL`) — Redis connection URL, default `redis://localhost:6379/0`;
 - `--queue-key` (env `QUEUE_KEY`) — queue key in Redis, default `dtq:tasks`;
-- `--tasks-dir` (env `TASKS_DIR`) — directory with task JSON files, default `data/tasks` in repository root;
 - `--concurrency` (env `CONCURRENCY`) — number of concurrent tasks, default `4`;
-- `--poll-interval` (env `POLL_INTERVAL_MS`) — polling interval for `dir` backend, default `1s`;
+- `--poll-interval` (env `POLL_INTERVAL_MS`) — polling interval, default `1s`;
 - `--log-level` (env `LOG_LEVEL`) — log level (`debug`, `info`, `warn`, `error`), default `info`.
 
 The queue backend is pluggable: to add a new one, implement the `Queue` interface (`Pop(ctx) (string, error)`) and register it in `worker/internal/queue/factory.go`.
@@ -121,4 +125,4 @@ go test ./...
 uv run pytest
 ```
 
-Integration tests (`tests/test_integration.py`) run the full pipeline: the API creates a task via HTTP, a real Go worker (automatically built to a temporary directory when tests run) executes it through the Redis queue, and the result is read back through the API. Requires Go installed and Redis available; if Redis isn't running, the tests automatically try to start it via `docker compose up -d redis`. If Redis is unavailable, integration tests are skipped.
+Integration tests (`tests/test_integration.py`) run the full pipeline: the API creates a task via HTTP, a real Go worker (automatically built to a temporary directory when tests run) executes it through the Redis queue, and the result is read back through the API. Requires Go installed, Redis and PostgreSQL available; if Redis/PostgreSQL aren't running, the tests automatically try to start them via `docker compose up -d redis postgres`. If unavailable, integration tests are skipped.

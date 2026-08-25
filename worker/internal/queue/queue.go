@@ -13,7 +13,7 @@ type Queue interface {
 	Close() error
 }
 
-func NewQueue(cfg config.Config, s *store.FileStore, logger *slog.Logger) (Queue, error) {
+func NewQueue(cfg config.Config, s store.Store, logger *slog.Logger) (Queue, error) {
 	return New(
 		QueueConfig{
 			Kind: cfg.QueueType,
