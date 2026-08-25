@@ -1,10 +1,10 @@
 # Distributed Task Queue — MVP
 
-## 1. Цель проекта
+## 1. Project Goal
 
-Создать минимальную распределённую систему для постановки фоновых задач в очередь и их выполнения отдельными Go-worker'ами.
+Create a minimal distributed system for enqueueing background tasks and executing them with separate Go workers.
 
-MVP должен поддерживать следующий сценарий:
+The MVP must support the following scenario:
 
 ```text
 Client
@@ -26,24 +26,24 @@ Task execution
 PostgreSQL
 ```
 
-Пользователь создаёт задачу через HTTP API, задача попадает в очередь, Go-worker забирает её и выполняет, а результат и состояние сохраняются в PostgreSQL.
+A user creates a task via HTTP API, the task enters the queue, a Go worker picks it up and executes it, and the result and state are saved in PostgreSQL.
 
 ---
 
-## 2. Компоненты
+## 2. Components
 
-MVP состоит из четырех основных сервисов и инфраструктуры.
+The MVP consists of four main services and infrastructure.
 
 ### Python API
 
-Отвечает за:
+Responsible for:
 
 * HTTP API;
-* создание задач;
-* получение состояния задачи;
-* хранение metadata о задачах.
+* task creation;
+* fetching task state;
+* storing task metadata.
 
-Технологии:
+Technologies:
 
 * Python 3.12+
 * FastAPI
@@ -53,26 +53,26 @@ MVP состоит из четырех основных сервисов и ин
 
 ### Redis
 
-Используется как message queue.
+Used as a message queue.
 
-Отвечает за:
+Responsible for:
 
-* хранение ожидающих задач;
-* передачу задач worker'ам.
+* storing pending tasks;
+* delivering tasks to workers.
 
-На этапе MVP не требуется реализовывать собственный message broker.
+At the MVP stage, building a custom message broker is not required.
 
 ### Go Worker
 
-Отвечает за:
+Responsible for:
 
-* подключение к Redis;
-* получение задач;
-* выполнение задач;
-* обновление статуса задачи;
+* connecting to Redis;
+* fetching tasks;
+* executing tasks;
+* updating task status;
 * graceful shutdown.
 
-Технологии:
+Technologies:
 
 * Go
 * goroutines
@@ -81,19 +81,19 @@ MVP состоит из четырех основных сервисов и ин
 
 ### PostgreSQL
 
-Хранит:
+Stores:
 
-* задачи;
-* их статус;
-* результат;
-* ошибку;
+* tasks;
+* their status;
+* result;
+* error;
 * timestamps.
 
 ---
 
 # 3. Task Model
 
-Каждая задача должна иметь примерно такую модель:
+Each task should have approximately this model:
 
 ```text
 Task
@@ -108,11 +108,11 @@ Task
 └── finished_at
 ```
 
-Каждая задача выполняется **только один раз**: `started_at`/`finished_at` — единственная пара отметок запуска и завершения.
+Each task is executed **only once**: `started_at`/`finished_at` is the single pair of start and finish timestamps.
 
 ### Status
 
-MVP должен поддерживать состояния:
+The MVP must support the following states:
 
 ```text
 PENDING
@@ -121,7 +121,7 @@ SUCCESS
 FAILED
 ```
 
-Жизненный цикл:
+Lifecycle:
 
 ```text
 PENDING
@@ -138,7 +138,7 @@ RUNNING
 
 # 4. HTTP API
 
-## Создание задачи
+## Create Task
 
 ```http
 POST /tasks
@@ -166,7 +166,7 @@ Response:
 
 ---
 
-## Получение задачи
+## Get Task
 
 ```http
 GET /tasks/{task_id}
@@ -191,38 +191,38 @@ Response:
 
 ---
 
-## Удаление задачи
+## Delete Task
 
-Удалить можно только задачу, которая ещё не начала выполняться (статус `PENDING`).
+Only tasks that haven't started yet (status `PENDING`) can be deleted.
 
 ```http
 DELETE /tasks/{task_id}
 ```
 
-Успех:
+Success:
 
 ```text
 204 No Content
 ```
 
-Ошибки:
+Errors:
 
 ```text
-404 — задача не найдена
-409 — задача уже начала выполняться (status != PENDING)
+404 — task not found
+409 — task already started executing (status != PENDING)
 ```
 
 ---
 
-# 5. Типы задач
+# 5. Task Types
 
-Для MVP достаточно реализовать 2–3 простых типа задач.
+For the MVP, it's sufficient to implement 2–3 simple task types.
 
-Например:
+For example:
 
 ### Echo
 
-Возвращает полученный payload.
+Returns the received payload.
 
 ```json
 {
@@ -233,7 +233,7 @@ DELETE /tasks/{task_id}
 }
 ```
 
-Результат:
+Result:
 
 ```json
 {
@@ -243,7 +243,7 @@ DELETE /tasks/{task_id}
 
 ### Sleep
 
-Используется для тестирования длительных задач.
+Used for testing long-running tasks.
 
 ```json
 {
@@ -254,11 +254,11 @@ DELETE /tasks/{task_id}
 }
 ```
 
-Worker должен подождать 5 секунд и завершить задачу.
+The worker should wait 5 seconds and complete the task.
 
 ### Fibonacci
 
-Позволяет проверить выполнение CPU-bound задачи.
+Allows testing CPU-bound task execution.
 
 ```json
 {
@@ -273,7 +273,7 @@ Worker должен подождать 5 секунд и завершить за
 
 # 6. Redis Queue
 
-При создании задачи:
+When creating a task:
 
 ```text
 FastAPI
@@ -286,7 +286,7 @@ FastAPI
                Queue
 ```
 
-В Redis желательно помещать не всю задачу, а только её ID:
+It's preferable to store only the task ID in Redis, not the entire task:
 
 ```text
 queue:
@@ -295,7 +295,7 @@ queue:
     task_id_3
 ```
 
-Worker получает ID:
+The worker receives the ID:
 
 ```text
 Redis
@@ -310,31 +310,31 @@ PostgreSQL
 Task
 ```
 
-Это позволяет PostgreSQL оставаться источником истины для состояния задачи.
+This allows PostgreSQL to remain the source of truth for task state.
 
 ---
 
 # 7. Go Worker
 
-Worker запускается отдельно:
+The worker runs separately:
 
 ```bash
 go-worker
 ```
 
-После запуска он:
+After startup, it:
 
-1. подключается к Redis;
-2. проверяет соединение с PostgreSQL;
-3. начинает ожидать задачи;
-4. получает ID задачи;
-5. получает задачу из PostgreSQL;
-6. меняет статус на `RUNNING`;
-7. выполняет задачу;
-8. сохраняет результат;
-9. меняет статус на `SUCCESS` или `FAILED`.
+1. connects to Redis;
+2. checks the PostgreSQL connection;
+3. starts waiting for tasks;
+4. receives a task ID;
+5. fetches the task from PostgreSQL;
+6. changes status to `RUNNING`;
+7. executes the task;
+8. saves the result;
+9. changes status to `SUCCESS` or `FAILED`.
 
-Пример:
+Example:
 
 ```text
 Redis
@@ -362,9 +362,9 @@ Execute
 
 # 8. Worker Pool
 
-Даже в MVP worker должен поддерживать несколько одновременно выполняемых задач.
+Even in the MVP, the worker must support multiple concurrent tasks.
 
-Например:
+For example:
 
 ```text
 Worker
@@ -375,20 +375,20 @@ Worker
   └── goroutine → Task 4
 ```
 
-Количество параллельных задач должно задаваться конфигурацией:
+The number of concurrent tasks should be configurable:
 
 ```yaml
 worker:
   concurrency: 4
 ```
 
-Например:
+For example:
 
 ```bash
 go-worker --concurrency=4
 ```
 
-Если одновременно пришло 20 задач, worker выполняет только 4:
+If 20 tasks arrive simultaneously, the worker only executes 4:
 
 ```text
 20 tasks
@@ -408,9 +408,9 @@ go-worker --concurrency=4
 
 ---
 
-# 9. Ошибки
+# 9. Errors
 
-Если задача завершилась ошибкой:
+If a task fails:
 
 ```text
 RUNNING
@@ -419,7 +419,7 @@ RUNNING
 FAILED
 ```
 
-В PostgreSQL необходимо сохранить ошибку:
+The error must be saved in PostgreSQL:
 
 ```json
 {
@@ -428,9 +428,9 @@ FAILED
 }
 ```
 
-Worker не должен падать из-за ошибки одной задачи.
+The worker must not crash due to a single task failure.
 
-Например:
+For example:
 
 ```text
 Task 1 → FAILED
@@ -438,20 +438,20 @@ Task 2 → SUCCESS
 Task 3 → SUCCESS
 ```
 
-Worker продолжает работать.
+The worker continues running.
 
 ---
 
 # 10. Graceful Shutdown
 
-При получении `SIGTERM` или `SIGINT` worker должен:
+Upon receiving `SIGTERM` or `SIGINT`, the worker must:
 
-1. перестать принимать новые задачи;
-2. дождаться выполнения текущих задач;
-3. закрыть соединения;
-4. завершиться.
+1. stop accepting new tasks;
+2. wait for running tasks to finish;
+3. close connections;
+4. exit.
 
-Например:
+For example:
 
 ```text
 SIGTERM
@@ -469,15 +469,15 @@ Close Redis
 Exit
 ```
 
-Это обязательная часть MVP, потому что worker является долгоживущим сервисом.
+This is a mandatory part of the MVP because the worker is a long-running service.
 
 ---
 
-# 11. Конфигурация
+# 11. Configuration
 
-Конфигурация не должна быть захардкожена.
+Configuration must not be hardcoded.
 
-Минимальный набор:
+Minimum set:
 
 ```yaml
 server:
@@ -494,19 +494,19 @@ worker:
   concurrency: 4
 ```
 
-Для production-подобного варианта секреты лучше передавать через environment variables.
+For production-like setups, secrets should be passed via environment variables.
 
 ---
 
 # 12. Docker Compose
 
-Весь MVP должен запускаться одной командой:
+The entire MVP should start with a single command:
 
 ```bash
 docker compose up
 ```
 
-Минимальные контейнеры:
+Minimum containers:
 
 ```text
 ┌─────────────────────────────────┐
@@ -528,30 +528,30 @@ docker compose up
 
 ---
 
-# 13. Минимальные тесты
+# 13. Minimum Tests
 
 ### Python
 
-Проверить:
+Verify:
 
-* создание задачи;
-* получение задачи;
-* валидацию payload;
-* обработку несуществующего task ID.
+* task creation;
+* task fetching;
+* payload validation;
+* handling of non-existent task IDs.
 
 ### Go
 
-Проверить:
+Verify:
 
-* обработку каждой task type;
-* успешное выполнение;
-* ошибку выполнения;
+* handling of each task type;
+* successful execution;
+* execution failure;
 * worker pool;
 * graceful shutdown.
 
-### Integration test
+### Integration Test
 
-Основной сценарий:
+Main scenario:
 
 ```text
 POST /tasks
@@ -572,7 +572,7 @@ PostgreSQL
 GET /tasks/{id}
 ```
 
-Ожидаемый результат:
+Expected result:
 
 ```text
 PENDING → RUNNING → SUCCESS
@@ -580,9 +580,9 @@ PENDING → RUNNING → SUCCESS
 
 ---
 
-# 14. Что НЕ нужно делать в MVP
+# 14. What NOT to Include in the MVP
 
-Следующие возможности лучше оставить на следующие версии:
+The following features are better left for future versions:
 
 * retries;
 * priority queues;
@@ -598,45 +598,45 @@ PENDING → RUNNING → SUCCESS
 * Prometheus;
 * Grafana;
 * OpenTelemetry;
-* собственный message broker;
+* custom message broker;
 * Kubernetes.
 
-Они интересны, но сильно увеличат объём проекта.
+They are interesting but would significantly increase the project scope.
 
 ---
 
 # 15. Definition of Done
 
-MVP считается завершённым, если можно выполнить следующий сценарий.
+The MVP is considered complete when the following scenario can be executed.
 
-### Шаг 1
+### Step 1
 
-Запустить систему:
+Start the system:
 
 ```bash
 docker compose up
 ```
 
-### Шаг 2
+### Step 2
 
-Создать задачу:
+Create a task:
 
 ```http
 POST /tasks
 ```
 
-### Шаг 3
+### Step 3
 
-Получить:
+Receive:
 
 ```text
 task_id = 123
 status = PENDING
 ```
 
-### Шаг 4
+### Step 4
 
-Go Worker автоматически получает задачу:
+The Go Worker automatically picks up the task:
 
 ```text
 PENDING
@@ -644,9 +644,9 @@ PENDING
 RUNNING
 ```
 
-### Шаг 5
+### Step 5
 
-Worker выполняет задачу:
+The worker executes the task:
 
 ```text
 RUNNING
@@ -654,15 +654,15 @@ RUNNING
 SUCCESS
 ```
 
-### Шаг 6
+### Step 6
 
-Получить результат:
+Fetch the result:
 
 ```http
 GET /tasks/123
 ```
 
-и увидеть:
+and see:
 
 ```json
 {
@@ -674,9 +674,9 @@ GET /tasks/123
 }
 ```
 
-### Шаг 7
+### Step 7
 
-Запустить несколько worker'ов:
+Start multiple workers:
 
 ```text
 Worker 1
@@ -684,11 +684,11 @@ Worker 2
 Worker 3
 ```
 
-и убедиться, что задачи распределяются между ними.
+and verify that tasks are distributed among them.
 
 ---
 
-# Итоговая архитектура MVP
+# Final MVP Architecture
 
 ```text
                        HTTP
@@ -716,10 +716,10 @@ Worker 3
                    └───────┘ └───────┘ └───────┘
 ```
 
-## Основная цель MVP
+## MVP Core Goal
 
-Не количество функций, а доказательство того, что работает полный pipeline:
+Not the number of features, but proof that the full pipeline works:
 
-**создание задачи → сохранение → очередь → распределённый worker → выполнение → сохранение результата → получение результата через API.**
+**task creation → persistence → queue → distributed worker → execution → result persistence → result retrieval via API.**
 
-После этого уже имеет смысл переходить к **V2: retries + visibility timeout + heartbeat + DLQ** — именно там начнётся самая интересная часть distributed systems.
+After that, it makes sense to move on to **V2: retries + visibility timeout + heartbeat + DLQ** — that's where the most interesting part of distributed systems begins.

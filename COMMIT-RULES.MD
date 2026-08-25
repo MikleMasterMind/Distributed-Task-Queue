@@ -1,53 +1,53 @@
 # Git Commit Convention
 
-Для проекта используется стиль **Conventional Commits**.
+This project uses the **Conventional Commits** style.
 
-Цель — сделать историю Git понятной, предсказуемой и пригодной для автоматической генерации changelog.
+The goal is to make the Git history understandable, predictable, and suitable for automatic changelog generation.
 
-## Формат
+## Format
 
 ```text
 <type>(<scope>): <description>
 ```
 
-Пример:
+Example:
 
 ```text
 feat(worker): add heartbeat mechanism
 ```
 
-Где:
+Where:
 
-* `type` — тип изменения;
-* `scope` — компонент проекта;
-* `description` — краткое описание изменения.
+* `type` — type of change;
+* `scope` — project component;
+* `description` — brief description of the change.
 
 ---
 
 ## Types
 
-Используются следующие типы:
+The following types are used:
 
-| Type       | Назначение                                       | Пример                                      |
+| Type       | Purpose                                          | Example                                     |
 | ---------- | ------------------------------------------------ | ------------------------------------------- |
-| `feat`     | Новая функциональность                           | `feat(queue): add priority queue`           |
-| `fix`      | Исправление ошибки                               | `fix(worker): handle redis disconnect`      |
-| `refactor` | Изменение структуры кода без изменения поведения | `refactor(api): extract task service`       |
-| `test`     | Добавление или изменение тестов                  | `test(worker): add retry tests`             |
-| `docs`     | Изменение документации                           | `docs(readme): add setup instructions`      |
-| `perf`     | Улучшение производительности                     | `perf(queue): reduce task polling overhead` |
-| `build`    | Изменение системы сборки                         | `build(go): update dependencies`            |
-| `ci`       | Изменение CI/CD                                  | `ci: add github actions workflow`           |
-| `chore`    | Прочие технические изменения                     | `chore: update development dependencies`    |
-| `revert`   | Откат предыдущего изменения                      | `revert: revert worker heartbeat`           |
+| `feat`     | New functionality                                | `feat(queue): add priority queue`           |
+| `fix`      | Bug fix                                          | `fix(worker): handle redis disconnect`      |
+| `refactor` | Code restructuring without behavior change       | `refactor(api): extract task service`       |
+| `test`     | Adding or modifying tests                        | `test(worker): add retry tests`             |
+| `docs`     | Documentation changes                            | `docs(readme): add setup instructions`      |
+| `perf`     | Performance improvement                          | `perf(queue): reduce task polling overhead` |
+| `build`    | Build system changes                             | `build(go): update dependencies`            |
+| `ci`       | CI/CD changes                                    | `ci: add github actions workflow`           |
+| `chore`    | Other technical changes                          | `chore: update development dependencies`    |
+| `revert`   | Reverting a previous change                      | `revert: revert worker heartbeat`           |
 
 ---
 
 ## Scope
 
-`scope` должен обозначать компонент проекта, которого касается изменение.
+`scope` should denote the project component affected by the change.
 
-Основные scopes:
+Main scopes:
 
 ```text
 api
@@ -62,7 +62,7 @@ docs
 ci
 ```
 
-Примеры:
+Examples:
 
 ```text
 feat(api): add task creation endpoint
@@ -73,7 +73,7 @@ feat(scheduler): add delayed tasks
 feat(observability): add prometheus metrics
 ```
 
-Если изменение затрагивает проект в целом и конкретный scope определить сложно, `scope` можно не указывать:
+If the change affects the project as a whole and a specific scope is hard to determine, `scope` can be omitted:
 
 ```text
 chore: update project dependencies
@@ -83,9 +83,9 @@ chore: update project dependencies
 
 ## Description
 
-Описание пишется на английском языке в **imperative mood** — как команда.
+The description is written in English in **imperative mood** — like a command.
 
-Использовать:
+Use:
 
 ```text
 add
@@ -96,7 +96,7 @@ update
 refactor
 ```
 
-Хорошо:
+Good:
 
 ```text
 feat(worker): add graceful shutdown
@@ -105,7 +105,7 @@ refactor(api): extract task service
 docs(readme): add development setup
 ```
 
-Плохо:
+Bad:
 
 ```text
 feat(worker): added graceful shutdown
@@ -117,11 +117,11 @@ update
 
 ---
 
-## Размер коммита
+## Commit Size
 
-Один коммит должен содержать **одно логическое изменение**.
+A single commit should contain **one logical change**.
 
-Хорошо:
+Good:
 
 ```text
 feat(queue): implement redis task queue
@@ -131,25 +131,25 @@ feat(worker): add graceful shutdown
 test(worker): add task execution tests
 ```
 
-Плохо:
+Bad:
 
 ```text
 feat: implement worker, queue, tests, docker and api
 ```
 
-Если изменение состоит из нескольких независимых частей, их следует разделить на несколько коммитов.
+If a change consists of multiple independent parts, they should be split into multiple commits.
 
 ---
 
 ## Commit Body
 
-Для небольших изменений достаточно одной строки:
+For small changes, a single line is sufficient:
 
 ```text
 feat(worker): add graceful shutdown
 ```
 
-Для сложных изменений можно добавить подробное описание:
+For complex changes, a detailed description can be added:
 
 ```text
 feat(queue): implement visibility timeout
@@ -162,26 +162,26 @@ period and is returned to the queue if the
 worker does not acknowledge it.
 ```
 
-Body следует использовать, когда из subject недостаточно понятно:
+The body should be used when the subject alone doesn't make it clear:
 
-* зачем было сделано изменение;
-* какое поведение изменилось;
-* какое архитектурное решение было принято;
-* какие ограничения появились.
+* why the change was made;
+* what behavior changed;
+* what architectural decision was made;
+* what new constraints were introduced.
 
 ---
 
 ## Breaking Changes
 
-Если изменение ломает существующий API или контракт, это должно быть явно обозначено.
+If a change breaks an existing API or contract, this must be explicitly indicated.
 
-Можно использовать `!`:
+You can use `!`:
 
 ```text
 feat(api)!: change task creation response
 ```
 
-и добавить `BREAKING CHANGE` в body:
+and add `BREAKING CHANGE` to the body:
 
 ```text
 feat(api)!: change task status format

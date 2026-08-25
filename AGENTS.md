@@ -7,7 +7,7 @@ V1 is in progress: the FastAPI task API, Redis queue and Go worker are implement
 - `MVP.md` — authoritative V1 spec (task model, statuses, HTTP API, scope). Read before writing feature code.
 - `ROADMAP.md` — V2+ plan (retry, visibility timeout, DLQ, heartbeat, etc.). Its "already implemented" list lags reality — trust the code, not it.
 - `COMMIT-RULES.MD` — binding commit convention (see below).
-- `README.md` — current run instructions and API usage (Russian).
+- `README.md` — current run instructions and API usage (English).
 
 ## Layout & packaging gotchas
 
@@ -43,7 +43,7 @@ V1 is in progress: the FastAPI task API, Redis queue and Go worker are implement
 
 ## Conventions
 
-- Docs in Russian; commit subjects/bodies in English.
+- Docs in English; commit subjects/bodies in English.
 - No comments in code — anywhere.
 - Use uv for everything (no pip/venv directly).
 
