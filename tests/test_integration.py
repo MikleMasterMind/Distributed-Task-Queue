@@ -96,3 +96,25 @@ def test_invalid_payload_rejected(client):
     assert resp.status_code == 422
     resp = client.post("/tasks", json={"type": "sleep", "payload": {"seconds": "x"}})
     assert resp.status_code == 422
+
+
+def test_smoke_all_task_types(client):
+    tasks = [
+        ("echo", {"message": "ping"}),
+        ("sleep", {"seconds": 1}),
+        ("fibonacci", {"n": 10}),
+    ]
+    created = [
+        client.post("/tasks", json={"type": t, "payload": p}).json()
+        for t, p in tasks
+    ]
+    results = [wait_for(client, c["id"], "SUCCESS", timeout=15) for c in created]
+
+    assert results[0]["result"] == {"message": "ping"}
+    assert results[1]["result"] == {"slept": 1}
+    assert results[2]["result"] == {"n": 10, "value": 55}
+
+    for r in results:
+        assert r["error"] is None
+        assert r["started_at"]
+        assert r["finished_at"]
