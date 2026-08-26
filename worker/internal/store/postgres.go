@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"time"
 
@@ -12,15 +13,15 @@ import (
 )
 
 type TaskModel struct {
-	ID         string         `gorm:"column:id;type:uuid;primaryKey"`
-	Type       string         `gorm:"column:type;type:varchar(20);not null"`
-	Payload    map[string]any `gorm:"column:payload;type:jsonb;not null"`
-	Status     string         `gorm:"column:status;type:varchar(20);not null;default:PENDING"`
-	Result     map[string]any `gorm:"column:result;type:jsonb"`
-	Error      *string        `gorm:"column:error;type:text"`
-	CreatedAt  time.Time      `gorm:"column:created_at;type:timestamptz;not null"`
-	StartedAt  *time.Time     `gorm:"column:started_at;type:timestamptz"`
-	FinishedAt *time.Time     `gorm:"column:finished_at;type:timestamptz"`
+	ID         string          `gorm:"column:id;type:uuid;primaryKey"`
+	Type       string          `gorm:"column:type;type:varchar(20);not null"`
+	Payload    json.RawMessage `gorm:"column:payload;type:jsonb;not null"`
+	Status     string          `gorm:"column:status;type:varchar(20);not null;default:PENDING"`
+	Result     json.RawMessage `gorm:"column:result;type:jsonb"`
+	Error      *string         `gorm:"column:error;type:text"`
+	CreatedAt  time.Time       `gorm:"column:created_at;type:timestamptz;not null"`
+	StartedAt  *time.Time      `gorm:"column:started_at;type:timestamptz"`
+	FinishedAt *time.Time      `gorm:"column:finished_at;type:timestamptz"`
 }
 
 func (TaskModel) TableName() string {
@@ -120,17 +121,21 @@ func (s *PostgresStore) Fail(ctx context.Context, id string, errMsg string, fini
 	return res.Error
 }
 
-func (s *PostgresStore) toTask(id, typ string, payload map[string]any, status string, result map[string]any, errMsg *string, createdAt time.Time, startedAt, finishedAt *time.Time) task.Task {
+func (s *PostgresStore) toTask(id, typ string, payload json.RawMessage, status string, result json.RawMessage, errMsg *string, createdAt time.Time, startedAt, finishedAt *time.Time) task.Task {
 	t := task.Task{
 		ID:         id,
 		Type:       typ,
-		Payload:    payload,
 		Status:     task.Status(status),
-		Result:     result,
 		Error:      errMsg,
 		CreatedAt:  createdAt,
 		StartedAt:  startedAt,
 		FinishedAt: finishedAt,
+	}
+	if payload != nil {
+		_ = json.Unmarshal(payload, &t.Payload)
+	}
+	if result != nil {
+		_ = json.Unmarshal(result, &t.Result)
 	}
 	return t
 }
