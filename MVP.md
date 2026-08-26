@@ -605,7 +605,30 @@ They are interesting but would significantly increase the project scope.
 
 ---
 
-# 15. Definition of Done
+# 15. Remaining Work
+
+## P0 — Blocks Definition of Done
+
+- [ ] Add FastAPI container to `docker-compose.yml`
+- [ ] Add Go Worker container to `docker-compose.yml`
+- [ ] Verify `docker compose up` starts all 4 services end-to-end
+
+## P1 — Spec Compliance
+
+- [ ] Make FastAPI `host` and `port` configurable via env vars (`HOST`, `PORT`)
+- [ ] Add PostgreSQL connection check on Go worker startup (§7, step 2)
+
+## P2 — Test Coverage
+
+- [ ] Add Go test for graceful shutdown (§13 requires it)
+
+## P3 — Documentation
+
+- [ ] Remove or correct `DirQueue` reference in `AGENTS.md` (does not exist in codebase)
+
+---
+
+# 16. Definition of Done
 
 The MVP is considered complete when the following scenario can be executed.
 
