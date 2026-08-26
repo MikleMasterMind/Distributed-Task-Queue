@@ -609,9 +609,9 @@ They are interesting but would significantly increase the project scope.
 
 ## P0 — Blocks Definition of Done
 
-- [ ] Add FastAPI container to `docker-compose.yml`
-- [ ] Add Go Worker container to `docker-compose.yml`
-- [ ] Verify `docker compose up` starts all 4 services end-to-end
+- [x] Add FastAPI container to `docker-compose.yml`
+- [x] Add Go Worker container to `docker-compose.yml`
+- [x] Verify `docker compose up` starts all 4 services end-to-end
 
 ## P1 — Spec Compliance
 
