@@ -8,28 +8,55 @@ Architecture: `FastAPI → Redis Queue → Go Workers → PostgreSQL`. When a ta
 
 Requires [uv](https://docs.astral.sh/uv/), Python 3.12+, Go 1.26+, Redis, PostgreSQL (or Docker).
 
+### All-in-one (Docker)
+
 ```bash
-cp .env.example .env          # configure DATABASE_URL, REDIS_URL, etc.
-./scripts/gen-docker-compose.sh  # generate docker-compose.yml from template
-docker compose up -d redis postgres  # start Redis and PostgreSQL
+cp .env.example .env              # configure credentials
+./scripts/gen-docker-compose.sh   # generate docker-compose.yml from template
+docker compose up                 # start Redis, PostgreSQL, API, and worker
+```
+
+The API is available at `http://localhost:8000` (Swagger UI at `/docs`).
+
+### Local development
+
+Start only infrastructure via Docker, then run the API and worker in your terminal:
+
+```bash
+cp .env.example .env
+./scripts/gen-docker-compose.sh
+docker compose up -d redis postgres
+```
+
+Install dependencies:
+
+```bash
 uv sync --extra dev
 ```
 
-Starting the API:
+Start the API (terminal 1):
 
 ```bash
 uv run distributed-task-queue
 ```
 
-Starting the Go worker (in a separate terminal):
+Start the Go worker (terminal 2):
 
 ```bash
 cd worker && go build -o worker ./cmd/worker && ./worker
 ```
 
-The worker reads configuration from `.env` in the project root (falls back to `worker/.env`). All settings can also be overridden via flags.
+The worker reads `.env` from the project root (falls back to `worker/.env`). All settings can also be overridden via flags — see [Go Worker](#go-worker) below.
 
-The API will be available at `http://0.0.0.0:8000` (Swagger UI at `/docs`). The worker fetches tasks from Redis and executes them, writing results to PostgreSQL.
+The API will be available at `http://localhost:8000` (Swagger UI at `/docs`). Verify it's working:
+
+```bash
+curl localhost:8000/docs  # should return Swagger UI HTML
+```
+
+Both processes read from the same `.env`, so they connect to the same Redis and PostgreSQL instances started by Docker Compose.
+
+### Configuration
 
 Configuration is read from `.env` (see `.env.example`):
 
@@ -41,7 +68,9 @@ Configuration is read from `.env` (see `.env.example`):
 | `QUEUE_TYPE` | `redis` | API queue backend: `redis`, `memory` |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
 | `QUEUE_KEY` | `dtq:tasks` | Redis list key for the task queue |
-| `LOG_LEVEL` | `info` | API log level (`debug`, `info`, `warning`, `error`, `critical`) |
+| `LOG_LEVEL` | `info` | Log level (`debug`, `info`, `warn`/`warning`, `error`) |
+| `API_PORT` | `8000` | API host port (Docker) |
+| `CONCURRENCY` | `4` | Number of concurrent worker tasks |
 | `REDIS_PORT` | `6379` | Redis host port (Docker) |
 | `POSTGRES_PORT` | `5432` | PostgreSQL host port (Docker) |
 | `POSTGRES_DB` | `dtq` | PostgreSQL database name (Docker) |
