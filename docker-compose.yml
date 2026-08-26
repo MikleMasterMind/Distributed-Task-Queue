@@ -22,3 +22,36 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://dtq:dtq@postgres:5432/dtq
+      REDIS_URL: redis://redis:6379/0
+      QUEUE_KEY: dtq:tasks
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://dtq:dtq@postgres:5432/dtq
+      REDIS_URL: redis://redis:6379/0
+      QUEUE_KEY: dtq:tasks
+      LOG_LEVEL: info
+      CONCURRENCY: 4
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
